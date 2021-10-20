@@ -1,16 +1,12 @@
 .PHONY: clean
 
 
-library = ${C_LIB_PATH}
-
-
 CC = gcc
 
 
 CFLAGS =
 CFLAGS += -Wall -Wextra
 CFLAGS += -fopenmp 
-CFLAGS += -I$(library)
 
 # CFLAGS += -O0
 CFLAGS += -O2
@@ -19,13 +15,14 @@ CFLAGS += -O2
 LDFLAGS = -lm
 
 
-# PLOT = 1
+LIBSRC =
 
-ifdef PLOT
+ifdef C_LIB_PATH
+    library = ${C_LIB_PATH}
+
     LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c
-    CFLAGS += -D'PLOT'
-else
-    LIBSRC =
+
+    CFLAGS += -I$(library) -D'PLOT'
 endif
 
 

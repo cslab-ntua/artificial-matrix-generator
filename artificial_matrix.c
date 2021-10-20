@@ -80,24 +80,35 @@
 
 
 int
-main()
+main(int argc, char **argv)
 {
 	struct csr_matrix * csr;
-	long nr_rows = 1000000;
-	long nr_cols = nr_rows;
+	long nr_rows;
+	long nr_cols;
 	double avg_nnz_per_row, std_nnz_per_row;
-	unsigned int seed = 0;
+	unsigned int seed;
+	char * distribution;
 	char * placement;
-	double d_f = 0.05;
+	double d_f;
 	double time;
 
-	// placement = "random";
-	placement = "diagonal";
+	if (argc < 6)
+	{
+		printf("wrong number of parameters\n");
+		exit(1);
+	}
 
-	avg_nnz_per_row = 10;
-	std_nnz_per_row = 2.5;
+	nr_rows = atoi(argv[1]);
+	nr_cols = nr_rows;
+	avg_nnz_per_row = atof(argv[2]);
+	std_nnz_per_row = atof(argv[3]);
+	distribution = argv[4];
+	placement = argv[5];
+	d_f = atof(argv[6]);
+	seed = atoi(argv[7]);
+
 	time = time_it(1,
-		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, seed, placement, d_f);
+		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, d_f);
 	);
 	printf("time generate matrix = %g\n", time);
 

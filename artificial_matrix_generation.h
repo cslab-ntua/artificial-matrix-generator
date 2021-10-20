@@ -34,7 +34,7 @@ struct csr_matrix {
 };
 
 
-struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, unsigned int seed, char * placement, double d_f);
+struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double d_f);
 
 
 #endif /* ARTIFICIAL_MATRIX_GENERATION_H */
