@@ -10,6 +10,17 @@
 #include "artificial_matrix_generation.h"
 
 
+#define error(fmt, ...)                      \
+do {                                         \
+	printf(stderr, fmt, __VA_ARGS__);    \
+	exit(1);                             \
+} while (0)
+
+
+static double mb_list[] =  {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+static long mb_list_n = sizeof(mb_list) / sizeof(mb_list[0]); 
+
+
 struct csr_matrix *
 artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double d_f)
 {
@@ -19,6 +30,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	long nnz;
 	long t_base[num_threads];
 	struct csr_matrix * csr;
+	ValueType * values;
 
 	long t_max_degree[num_threads];
 	long max_degree = 0;
@@ -27,19 +39,18 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	double * bandwidths;
 	double * scatters;
 
-	long i;
-
-	offsets = malloc((nr_rows+1) * sizeof(*offsets));
-	csr = malloc(sizeof(*csr));
+	offsets = (typeof(offsets)) malloc((nr_rows+1) * sizeof(*offsets));
+	csr = (typeof(csr)) malloc(sizeof(*csr));
 	csr->nr_rows = nr_rows;
 	csr->nr_cols = nr_cols;
 	csr->seed = seed;
+	csr->distribution = distribution;
 	csr->placement = placement;
 	csr->diagonal_factor = d_f;
 
-	degrees = malloc(nr_rows * sizeof(*degrees));
-	bandwidths = malloc(nr_rows * sizeof(*bandwidths));
-	scatters = malloc(nr_rows * sizeof(*scatters));
+	degrees = (typeof(degrees)) malloc(nr_rows * sizeof(*degrees));
+	bandwidths = (typeof(bandwidths)) malloc(nr_rows * sizeof(*bandwidths));
+	scatters = (typeof(scatters)) malloc(nr_rows * sizeof(*scatters));
 
 	_Pragma("omp parallel")
 	{
@@ -104,17 +115,31 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			}
 			nnz = total_sum;
 			offsets[nr_rows] = nnz;
-			col_ind = malloc(nnz * sizeof(*col_ind));
+			col_ind = (typeof(col_ind)) malloc(nnz * sizeof(*col_ind));
+			values = (typeof(values)) malloc(nnz * sizeof(*values));
 
+			csr->nr_nzeros = nnz;
 			csr->row_ptr = offsets;
 			csr->col_ind = col_ind;
-			csr->nr_nzeros = nnz;
+			csr->values = values;
+			csr->density = ((double) nnz) / ((double) nr_rows * nr_cols) * 100;
+			csr->mem_footprint = (nnz * (sizeof(*values) + sizeof(*col_ind)) +  (nr_rows + 1) * sizeof(*offsets)) / ((double) 1024 * 1024);
+
+			for (i=0;i<mb_list_n;i++)
+				if (csr->mem_footprint < mb_list[i])
+					break;
+			if (i == 0)
+				snprintf(csr->mem_range, sizeof(csr->mem_range), "[<%g]", mb_list[0]);
+			else if (i >= mb_list_n)
+				snprintf(csr->mem_range, sizeof(csr->mem_range), "[>%g]", mb_list[mb_list_n - 1]);
+			else
+				snprintf(csr->mem_range, sizeof(csr->mem_range), "[%g-%g]", mb_list[i-1], mb_list[i]);
 		}
 		_Pragma("omp barrier")
 
 		long bound_l, bound_r, half_range;
 		double b, s;
-		bound_l = 0;
+		bound_l = 0.0;
 		bound_r = nr_cols;
 		SU = sorted_set_new(max_degree);
 		j_s = t_base[tnum];
@@ -152,16 +177,20 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 						k = bound_l;
 					// tmp++;
 				}
+
+				values[j] = random_uniform(rs, 0, 1);
 			}
 			// if (tmp > 10)
 				// printf("tmp=%ld\n", tmp);
 
 			sorted_set_sort(SU, &col_ind[j_s]);
 
-			b = col_ind[j_e-1] - col_ind[j_s];
+			b = col_ind[j_e-1] - col_ind[j_s] + 1;
+			b /= nr_cols;
 			bandwidths[i] = b;
 
-			s = (b > 0) ? degree / b : 0;
+			// s = (b > 0) ? degree / b : 0;
+			s = degree / b;
 			scatters[i] = s;
 
 			j_s = j_e;
@@ -180,30 +209,47 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	csr->avg_sc = matrix_mean(scatters, nr_rows);
 	csr->std_sc = matrix_std_base(scatters, nr_rows, csr->avg_sc);
 
-	for (i=0;i<10;i++)
-		printf("%d ", offsets[i]);
-	printf("\n");
-
-	#if 0
-		printf("%d %d %d %d\n", csr->nr_rows, csr->nr_cols, csr->nr_nzeros, csr->row_ptr[nr_rows]);
-		for (i=0;i<csr->nr_rows;i++)
-		{
-			long j, j_s, j_e;
-			j_s = csr->row_ptr[i];
-			j_e = csr->row_ptr[i+1];
-			printf("%3ld (%3ld): ", i, j_e - j_s);
-			for (j=j_s;j<j_e;j++)
-			{
-				printf("%3d ", csr->col_ind[j]);
-			}
-			printf("\n");
-		}
-	#endif
-
 	free(degrees);
 	free(bandwidths);
 	free(scatters);
 
 	return csr;
+}
+
+
+void
+csr_matrix_print(struct csr_matrix * csr)
+{
+	long i, j, j_s, j_e;
+	printf("%d %d %d %d\n", csr->nr_rows, csr->nr_cols, csr->nr_nzeros, csr->row_ptr[csr->nr_rows]);
+	for (i=0;i<csr->nr_rows;i++)
+	{
+		j_s = csr->row_ptr[i];
+		j_e = csr->row_ptr[i+1];
+		printf("%3ld (%3ld): ", i, j_e - j_s);
+		for (j=j_s;j<j_e;j++)
+		{
+			printf("(%3d:%g) ", csr->col_ind[j], csr->values[j]);
+		}
+		printf("\n");
+	}
+}
+
+
+void
+csr_matrix_write_mtx(struct csr_matrix * csr, char * file_out)
+{
+	long i, j, j_s, j_e;
+	FILE * file;
+	file = fopen(file_out, "w");
+	fprintf(file, "%%%%MatrixMarket matrix coordinate real general\n");
+	fprintf(file, "%d %d %d\n", csr->nr_rows, csr->nr_cols, csr->nr_nzeros);
+	for (i=0;i<csr->nr_rows;i++)
+	{
+		j_s = csr->row_ptr[i];
+		j_e = csr->row_ptr[i+1];
+		for (j=j_s;j<j_e;j++)
+			fprintf(file, "%ld %ld %g\n", i, j, csr->values[j]);
+	}
 }
 

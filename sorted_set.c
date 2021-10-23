@@ -10,10 +10,10 @@ struct sorted_set *
 sorted_set_new(long max_size)
 {
 	struct sorted_set * t;
-	t = malloc(sizeof(*t));
+	t = (typeof(t)) malloc(sizeof(*t));
 	t->max_size = max_size;
 	t->size = 0;
-	t->nodes = malloc(max_size * sizeof(*t->nodes));
+	t->nodes = (typeof(t->nodes)) malloc(max_size * sizeof(*t->nodes));
 	t->root = NULL;
 	return t;
 }
@@ -155,7 +155,7 @@ rotate(struct sorted_set_node * n)
 int
 sorted_set_insert(struct sorted_set * t, int val)
 {
-	struct sorted_set_node * n, * p, * new;
+	struct sorted_set_node * n, * p, * n_new;
 	long j;
 
 	j = t->size;
@@ -166,17 +166,17 @@ sorted_set_insert(struct sorted_set * t, int val)
 		// error("tree full");
 	}
 
-	new = &t->nodes[j];
-	new->val = val;
-	new->b = 0;
-	new->p = NULL;
-	new->l = NULL;
-	new->r = NULL;
+	n_new = &t->nodes[j];
+	n_new->val = val;
+	n_new->b = 0;
+	n_new->p = NULL;
+	n_new->l = NULL;
+	n_new->r = NULL;
 
 	// Empty tree.
 	if (j == 0)
 	{
-		t->root = new;
+		t->root = n_new;
 		t->size = 1;
 		return 1;
 	}
@@ -189,7 +189,7 @@ sorted_set_insert(struct sorted_set * t, int val)
 		if (val == n->val)   // Value already exists, insert fails.
 			return 0;
 		p = n;
-		if (new->val > n->val)
+		if (n_new->val > n->val)
 		{
 			n->b_buf = 1;
 			n = n->r;
@@ -203,11 +203,11 @@ sorted_set_insert(struct sorted_set * t, int val)
 
 	// Insertion was successful.
 	n = p;
-	new->p = n;
+	n_new->p = n;
 	if (n->b_buf == 1)
-		n->r = new;
+		n->r = n_new;
 	else
-		n->l = new;
+		n->l = n_new;
 	t->size++;
 
 	p = NULL;

@@ -10,7 +10,7 @@ matrix_mean(double * a, long n)
 	int num_threads = omp_get_max_threads();
 	double sums[num_threads];
 	double sum = 0;
-	int i;
+	long i;
 	#pragma omp parallel
 	{
 		int tnum = omp_get_thread_num();
@@ -35,7 +35,7 @@ matrix_var_base(double * a, long n, double mean)
 	int num_threads = omp_get_max_threads();
 	double sums[num_threads];
 	double sum = 0;
-	int i;
+	long i;
 	#pragma omp parallel
 	{
 		int tnum = omp_get_thread_num();

@@ -70,7 +70,7 @@
 			figure_simple_plot("degree_distribution.png", num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
 				figure_enable_legend(_fig);
 				figure_set_title(_fig, "degree distribution");
-				figure_series_type_histogram(_s, resolution);
+				figure_series_type_histogram(_s, resolution, 1);
 				// figure_set_bounds_x(_fig, -3, 5);
 			);
 		#endif
@@ -112,13 +112,23 @@ main(int argc, char **argv)
 	);
 	printf("time generate matrix = %g\n", time);
 
+	// csr_matrix_write_mtx(csr, "out.mtx");
+
 	#ifdef PLOT
 		plot_csr(csr, "csr.png");
 	#endif
 
+	printf("synthetic, ");
+	printf("distribution=%s, ", csr->distribution);
+	printf("placement=%s, ", csr->placement);
+	printf("diagonal_factor=%g, ", csr->diagonal_factor);
+	printf("seed=%d, ", csr->seed);
 	printf("rows=%d, ", csr->nr_rows);
 	printf("cols=%d, ", csr->nr_cols);
 	printf("nnz=%d, ", csr->nr_nzeros);
+	printf("density=%g, ", csr->density);
+	printf("mem_footprint=%g, ", csr->mem_footprint);
+	printf("mem_range=%s, ", csr->mem_range);
 	printf("avg_nnz_per_row=%g, ", csr->avg_nnz_per_row);
 	printf("std_nnz_per_row=%g, ", csr->std_nnz_per_row);
 	printf("avg_bw=%g, ", csr->avg_bw);
@@ -127,7 +137,6 @@ main(int argc, char **argv)
 	printf("std_sc=%g, ", csr->std_sc);
 	printf("\n");
  
-
 	return 0;
 }
 

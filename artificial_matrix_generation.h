@@ -6,9 +6,9 @@
 
 
 struct csr_matrix {
-	int *row_ptr;
-	int *col_ind;
-	ValueType *values;
+	int * row_ptr;
+	int * col_ind;
+	ValueType * values;
 
 	unsigned int nr_rows;
 	unsigned int nr_cols;
@@ -35,6 +35,8 @@ struct csr_matrix {
 
 
 struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double d_f);
+void csr_matrix_print(struct csr_matrix * csr);
+void csr_matrix_write_mtx(struct csr_matrix * csr, char * file_out);
 
 
 #endif /* ARTIFICIAL_MATRIX_GENERATION_H */
