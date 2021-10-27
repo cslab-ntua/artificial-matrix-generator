@@ -3,13 +3,12 @@
 #include <math.h>
 #include <omp.h>
 
-#include "time_it.h"
-
 #include "artificial_matrix_generation.h"
 
 
 #ifdef PLOT
 
+	#include "time_it.h"
 	#include "plot/plot.h"
 
 	double
@@ -90,7 +89,6 @@ main(int argc, char **argv)
 	char * distribution;
 	char * placement;
 	double d_f;
-	double time;
 
 	if (argc < 6)
 	{
@@ -107,10 +105,15 @@ main(int argc, char **argv)
 	d_f = atof(argv[6]);
 	seed = atoi(argv[7]);
 
+	#ifdef PLOT
+	double time;
 	time = time_it(1,
+	#endif
 		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, d_f);
+	#ifdef PLOT
 	);
 	printf("time generate matrix = %g\n", time);
+	#endif
 
 	// csr_matrix_write_mtx(csr, "out.mtx");
 

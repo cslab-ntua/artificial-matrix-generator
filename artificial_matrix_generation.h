@@ -2,7 +2,9 @@
 #define ARTIFICIAL_MATRIX_GENERATION_H
 
 
-#define ValueType  double
+#ifndef ValueType
+	#define ValueType  double
+#endif
 
 
 struct csr_matrix {

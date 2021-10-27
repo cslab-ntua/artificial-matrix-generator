@@ -62,7 +62,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		long degree;
 		long sum, total_sum;
 		long local_max_degree = 0;
-		struct sorted_set * SU;
+		struct sorted_set * SS;
 
 		reseed_period = nr_rows / 1000;
 		if (reseed_period < 1)
@@ -141,7 +141,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		double b, s;
 		bound_l = 0.0;
 		bound_r = nr_cols;
-		SU = sorted_set_new(max_degree);
+		SS = sorted_set_new(max_degree);
 		j_s = t_base[tnum];
 		for (i=i_s;i<i_e;i++)
 		{
@@ -152,7 +152,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			scatters[i] = 0;
 			if (degree == 0)
 				continue;
-			SU->size = 0;
+			SS->size = 0;
 			if (*placement == 'd')
 			{
 				half_range = (((double) degree) / d_f);
@@ -169,7 +169,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			for (j=j_s;j<j_e;j++)
 			{
 				k = random_uniform_integer(rs, bound_l, bound_r);
-				while (!sorted_set_insert(SU, k))
+				while (!sorted_set_insert(SS, k))
 				{
 					// k = random_uniform_integer(rs, bound_l, bound_r);
 					k++;
@@ -183,7 +183,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			// if (tmp > 10)
 				// printf("tmp=%ld\n", tmp);
 
-			sorted_set_sort(SU, &col_ind[j_s]);
+			sorted_set_sort(SS, &col_ind[j_s]);
 
 			b = col_ind[j_e-1] - col_ind[j_s] + 1;
 			b /= nr_cols;
@@ -196,7 +196,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			j_s = j_e;
 		}
 
-		sorted_set_destroy(SU);
+		sorted_set_destroy(SS);
 		random_destroy(rs);
 	}
 
