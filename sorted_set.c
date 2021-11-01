@@ -27,7 +27,6 @@ sorted_set_destroy(struct sorted_set * t)
 }
 
 
-// A lot faster than the above, which writes b_buf for every iteration.
 static
 int
 sorted_set_sort_rec(struct sorted_set_node * n, int * A, long i)
