@@ -5,7 +5,7 @@
 
 #include "random.h"
 #include "matrix_util.h"
-#include "sorted_set.h"
+#include "ordered_set.h"
 
 #include "artificial_matrix_generation.h"
 
@@ -21,8 +21,51 @@ static double mb_list[] =  {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 static long mb_list_n = sizeof(mb_list) / sizeof(mb_list[0]); 
 
 
+static
+double
+pdf(double x, double B, double n)
+{
+	double a, b;
+	long i;
+	a = (B - x + 1) * n/x * (n-1)/(x-1);
+	b = 1;
+	for (i=0;i<(long)n;i++)
+		b *= (x-i) / (B-i);
+	return a * b;
+}
+
+static
+double
+expected_bw(double B, double n)
+{
+	double E;
+	long i;
+	E = 0;
+	for (i=n;i<=(long)B;i++)
+		E += pdf(i, B, n) * i;
+	return E;
+}
+
+
+static
+double
+calculate_new_bw(double B, double n)
+{
+	double E, E_new, ratio, B_new;
+	E = expected_bw(B, n);
+	ratio = E / B;
+	B_new = B / ratio;
+	E_new = expected_bw(B_new, n);
+	printf("n = %g, bw = %g, predicted bw = %g, corrected bw = %g, new prediction = %g\n", n, B, E, B_new, E_new);
+	return B_new;
+}
+
+
+/*
+ * bw_scaled: scaled target bandwidth ([0,1]), as a fraction of row size (number of columns).
+ */
 struct csr_matrix *
-artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double d_f)
+artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled)
 {
 	int num_threads = omp_get_max_threads();
 	int * offsets;
@@ -31,6 +74,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	long t_base[num_threads];
 	struct csr_matrix * csr;
 	ValueType * values;
+	double bw_corrected;
 
 	long t_max_degree[num_threads];
 	long max_degree = 0;
@@ -46,7 +90,9 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	csr->seed = seed;
 	csr->distribution = distribution;
 	csr->placement = placement;
-	csr->diagonal_factor = d_f;
+	if (bw_scaled > 1)                    // bandwidth <= number of columns
+		bw_scaled = 1;
+	csr->bandwidth_scaled = bw_scaled;
 
 	degrees = (typeof(degrees)) malloc(nr_rows * sizeof(*degrees));
 	bandwidths = (typeof(bandwidths)) malloc(nr_rows * sizeof(*bandwidths));
@@ -62,7 +108,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		long degree;
 		long sum, total_sum;
 		long local_max_degree = 0;
-		struct sorted_set * SS;
+		struct ordered_set * OS;
 
 		reseed_period = nr_rows / 1000;
 		if (reseed_period < 1)
@@ -87,7 +133,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);    // We need reproducible results, independently of the number of threads, but random_r() is too slow (even x10 for many, small rows)!
 			rand_val = random_normal(rs, avg_nnz_per_row, std_nnz_per_row);
-			degree = (long) (rand_val > 0 ? rand_val : -rand_val);
+			degree = floor((rand_val > 0 ? rand_val : 0) + 0.5);
 			if (degree > nr_cols)
 				degree = nr_cols;
 			if (degree > local_max_degree)
@@ -125,6 +171,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			csr->density = ((double) nnz) / ((double) nr_rows * nr_cols) * 100;
 			csr->mem_footprint = (nnz * (sizeof(*values) + sizeof(*col_ind)) +  (nr_rows + 1) * sizeof(*offsets)) / ((double) 1024 * 1024);
 
+			bw_corrected = calculate_new_bw(bw_scaled * nr_cols, ((double) nnz) / nr_rows);      // Recalculate banwidth with the actual avg nnz per row.
+
 			for (i=0;i<mb_list_n;i++)
 				if (csr->mem_footprint < mb_list[i])
 					break;
@@ -137,11 +185,12 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		}
 		_Pragma("omp barrier")
 
-		long bound_l, bound_r, half_range;
+		long bound_l, bound_r, bound_relaxed_l, bound_relaxed_r, range, half_range;
 		double b, s;
-		bound_l = 0.0;
+
+		bound_l = 0;
 		bound_r = nr_cols;
-		SS = sorted_set_new(max_degree);
+		OS = ordered_set_new(max_degree);
 		j_s = t_base[tnum];
 		for (i=i_s;i<i_e;i++)
 		{
@@ -152,38 +201,61 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			scatters[i] = 0;
 			if (degree == 0)
 				continue;
-			SS->size = 0;
+			OS->size = 0;
+
+			range = floor(bw_corrected + 0.5);
+			// range = floor(bw_scaled * nr_cols + 0.5);
+			// range = floor(2 * bw_scaled * nr_cols + 0.5);
+			if (range < degree)                           // At this point: range >= degree > 0
+				range = degree;
+			half_range = range / 2;
+
 			if (*placement == 'd')
 			{
-				half_range = (((double) degree) / d_f);
-				bound_l = i - half_range;
-				if (bound_l < 0)
-					bound_l = 0;
-				bound_r = i + half_range;
-				if (bound_r > nr_cols)
-					bound_r = nr_cols;
+				bound_relaxed_l = i - half_range;
+				bound_relaxed_r = i + half_range + range % 2;      // Correct modulo upwards.
 			}
+			else
+			{
+				bound_relaxed_l = nr_cols/2 - half_range;
+				bound_relaxed_r = nr_cols/2 + half_range + range % 2;
+			}
+			bound_l = bound_relaxed_l;
+			bound_r = bound_relaxed_r;
+			if (bound_l < 0)
+			{
+				bound_l = 0;
+				if (bound_r < degree)
+					bound_r = degree;
+			}
+			if (bound_r > nr_cols)
+			{
+				bound_r = nr_cols;
+				if (bound_l > nr_cols - degree)
+					bound_l = nr_cols - degree;
+			}
+
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);
-			// long tmp = 0;
 			for (j=j_s;j<j_e;j++)
 			{
-				k = random_uniform_integer(rs, bound_l, bound_r);
-				while (!sorted_set_insert(SS, k))
+				k = random_uniform_integer(rs, bound_relaxed_l, bound_relaxed_r);
+				if (k >= bound_r)
+					k = bound_r -1;
+				else if (k < bound_l)
+					k = bound_l;
+				while (!ordered_set_insert(OS, k))
 				{
 					// k = random_uniform_integer(rs, bound_l, bound_r);
 					k++;
 					if (k >= bound_r)
 						k = bound_l;
-					// tmp++;
 				}
 
 				values[j] = random_uniform(rs, 0, 1);
 			}
-			// if (tmp > 10)
-				// printf("tmp=%ld\n", tmp);
 
-			sorted_set_sort(SS, &col_ind[j_s]);
+			ordered_set_sort(OS, &col_ind[j_s]);
 
 			b = col_ind[j_e-1] - col_ind[j_s] + 1;
 			b /= nr_cols;
@@ -196,7 +268,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			j_s = j_e;
 		}
 
-		sorted_set_destroy(SS);
+		ordered_set_destroy(OS);
 		random_destroy(rs);
 	}
 

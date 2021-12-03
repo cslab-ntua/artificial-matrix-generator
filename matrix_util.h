@@ -15,7 +15,8 @@ matrix_min_max(double * a, long n, double * min, double * max)
 		int tnum = omp_get_thread_num();
 		double min_partial, max_partial;
 		long i;
-		min_partial = max_partial = a[0];
+		min_partial = a[0];
+		max_partial = a[0];
 		#pragma omp for schedule(static)
 		for (i=0;i<n;i++)
 		{

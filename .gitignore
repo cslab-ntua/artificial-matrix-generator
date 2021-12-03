@@ -54,4 +54,6 @@ dkms.conf
 # Other
 *.png
 figures/
+backup/
+python/
 

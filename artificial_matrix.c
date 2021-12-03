@@ -61,15 +61,17 @@
 		figure_simple_plot(file_out, num_pixels_x, num_pixels_y, (csr, csr, NULL, csr->nr_nzeros, 0, get_col, get_row),
 			figure_enable_legend(_fig);
 			figure_axes_origin_upper_left(_fig);
+			figure_set_bounds_x(_fig, 0, csr->nr_cols);
+			figure_set_bounds_y(_fig, 0, csr->nr_rows);
 		);
 
 		// Plot degree histogram.
 		#if 1
-			long resolution = 1000;
+			long num_bins = 1000;
 			figure_simple_plot("degree_distribution.png", num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
 				figure_enable_legend(_fig);
 				figure_set_title(_fig, "degree distribution");
-				figure_series_type_histogram(_s, resolution, 1);
+				figure_series_type_histogram(_s, num_bins, 1);
 				// figure_set_bounds_x(_fig, -3, 5);
 			);
 		#endif
@@ -88,7 +90,7 @@ main(int argc, char **argv)
 	unsigned int seed;
 	char * distribution;
 	char * placement;
-	double d_f;
+	double bw;
 
 	if (argc < 6)
 	{
@@ -102,14 +104,14 @@ main(int argc, char **argv)
 	std_nnz_per_row = atof(argv[3]);
 	distribution = argv[4];
 	placement = argv[5];
-	d_f = atof(argv[6]);
+	bw = atof(argv[6]);
 	seed = atoi(argv[7]);
 
 	#ifdef PLOT
 	double time;
 	time = time_it(1,
 	#endif
-		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, d_f);
+		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw);
 	#ifdef PLOT
 	);
 	printf("time generate matrix = %g\n", time);
@@ -124,7 +126,7 @@ main(int argc, char **argv)
 	printf("synthetic, ");
 	printf("distribution=%s, ", csr->distribution);
 	printf("placement=%s, ", csr->placement);
-	printf("diagonal_factor=%g, ", csr->diagonal_factor);
+	printf("bandwidth_scaled=%g, ", csr->bandwidth_scaled);
 	printf("seed=%d, ", csr->seed);
 	printf("rows=%d, ", csr->nr_rows);
 	printf("cols=%d, ", csr->nr_cols);

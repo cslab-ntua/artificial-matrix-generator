@@ -3,13 +3,13 @@
 
 // #include "debug.h"
 
-#include "sorted_set.h"
+#include "ordered_set.h"
 
 
-struct sorted_set *
-sorted_set_new(long max_size)
+struct ordered_set *
+ordered_set_new(long max_size)
 {
-	struct sorted_set * t;
+	struct ordered_set * t;
 	t = (typeof(t)) malloc(sizeof(*t));
 	t->max_size = max_size;
 	t->size = 0;
@@ -20,7 +20,7 @@ sorted_set_new(long max_size)
 
 
 void
-sorted_set_destroy(struct sorted_set * t)
+ordered_set_destroy(struct ordered_set * t)
 {
 	free(t->nodes);
 	free(t);
@@ -29,30 +29,30 @@ sorted_set_destroy(struct sorted_set * t)
 
 static
 int
-sorted_set_sort_rec(struct sorted_set_node * n, int * A, long i)
+ordered_set_sort_rec(struct ordered_set_node * n, int * A, long i)
 {
 	if (n->l != NULL)
-		i = sorted_set_sort_rec(n->l, A, i);
+		i = ordered_set_sort_rec(n->l, A, i);
 	A[i++] = n->val;
 	if (n->r != NULL)
-		i = sorted_set_sort_rec(n->r, A, i);
+		i = ordered_set_sort_rec(n->r, A, i);
 	return i;
 }
 
 
 void
-sorted_set_sort(struct sorted_set * t, int * A)
+ordered_set_sort(struct ordered_set * t, int * A)
 {
-	sorted_set_sort_rec(t->root, A, 0);
+	ordered_set_sort_rec(t->root, A, 0);
 }
 
 
 // n : old root  ,  n->r : new root
 static
-struct sorted_set_node *
-rot_l(struct sorted_set_node * n)
+struct ordered_set_node *
+rot_l(struct ordered_set_node * n)
 {
-	struct sorted_set_node * r, * r_l;
+	struct ordered_set_node * r, * r_l;
 	int b, b_r;
 	r = n->r;
 	b = n->b;
@@ -85,10 +85,10 @@ rot_l(struct sorted_set_node * n)
 
 // n : old root  ,  n->l : new root
 static
-struct sorted_set_node *
-rot_r(struct sorted_set_node * n)
+struct ordered_set_node *
+rot_r(struct ordered_set_node * n)
 {
-	struct sorted_set_node * l, * l_r;
+	struct ordered_set_node * l, * l_r;
 	int b, b_l;
 	l = n->l;
 	b = n->b;
@@ -120,10 +120,10 @@ rot_r(struct sorted_set_node * n)
 
 
 static
-struct sorted_set_node *
-rotate(struct sorted_set_node * n)
+struct ordered_set_node *
+rotate(struct ordered_set_node * n)
 {
-	struct sorted_set_node * c;
+	struct ordered_set_node * c;
 	if (n->b == 2)
 	{
 		if (n->r->b == -1)
@@ -152,9 +152,9 @@ rotate(struct sorted_set_node * n)
 
 
 int
-sorted_set_insert(struct sorted_set * t, int val)
+ordered_set_insert(struct ordered_set * t, int val)
 {
-	struct sorted_set_node * n, * p, * n_new;
+	struct ordered_set_node * n, * p, * n_new;
 	long j;
 
 	j = t->size;
