@@ -142,6 +142,7 @@ main(int argc, char **argv)
 	printf("std_sc=%g, ", csr->std_sc);
 	printf("\n");
  
+	free_csr_matrix(csr);
 	return 0;
 }
 

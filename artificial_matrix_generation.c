@@ -21,6 +21,19 @@ static double mb_list[] =  {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 static long mb_list_n = sizeof(mb_list) / sizeof(mb_list[0]); 
 
 
+int
+free_csr_matrix(struct csr_matrix * csr)
+{
+	if (!csr)
+		return 1;
+	free(csr->values);
+	free(csr->col_ind);
+	free(csr->row_ptr);
+	free(csr);
+	return 0;
+}
+
+
 static
 double
 pdf(double x, double B, double n)
@@ -87,6 +100,10 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	double * degrees;
 	double * bandwidths;
 	double * scatters;
+
+	printf("args: %ld, %ld, %lf, %lf, %s, %u, %s, %lf\n", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw_scaled);
+	// printf("args: %ld\n", nr_rows);
+	// exit(0);
 
 	offsets = (typeof(offsets)) malloc((nr_rows+1) * sizeof(*offsets));
 	csr = (typeof(csr)) malloc(sizeof(*csr));
@@ -176,7 +193,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			csr->density = ((double) nnz) / ((double) nr_rows * nr_cols) * 100;
 			csr->mem_footprint = (nnz * (sizeof(*values) + sizeof(*col_ind)) +  (nr_rows + 1) * sizeof(*offsets)) / ((double) 1024 * 1024);
 
-			bw_corrected = calculate_new_bw(bw_scaled * nr_cols, ((double) nnz) / nr_rows);      // Recalculate banwidth with the actual avg nnz per row.
+			bw_corrected = calculate_new_bw(bw_scaled * nr_cols, floor(((double) nnz) / nr_rows + 0.5));      // Recalculate banwidth with the actual avg nnz per row.
 
 			for (i=0;i<mb_list_n;i++)
 				if (csr->mem_footprint < mb_list[i])
@@ -259,7 +276,12 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 					if (retries < 20)   // If we fail 20 times, we can assume it is nearly filled (e.g. 1/2 ^ 20 = 1/1048576 for half filled bandwidth).
 					{
 						// Random retries give surprisingly better results, compared to searching serially (e.g. 5 vs 45 sec for filled bandwidth), guess better statistical properties.
-						k = random_uniform_integer(rs, bound_l, bound_r);
+						k = random_uniform_integer(rs, bound_relaxed_l, bound_relaxed_r);
+						if (k >= bound_r)
+							k = bound_r -1;
+						else if (k < bound_l)
+							k = bound_l;
+						// k = random_uniform_integer(rs, bound_l, bound_r);
 						// k++;
 						// if (k >= bound_r)
 							// k = bound_l;
