@@ -151,8 +151,9 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		if (avg_norm / 3 < std_norm)
 			std_norm = avg_norm / 3;
 	}
-	else
+	else  // ignore exponential
 	{
+		MAX = 0;
 		C = 0;
 		avg_exp = 0;
 		std_exp = 0;
