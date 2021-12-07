@@ -13,8 +13,11 @@ export GOMP_CPU_AFFINITY="0-$((${cores}-1))"
 
 
 params=(
+    # '207000 8.5 0.84 normal random 0.5 0 14'
+    '207000 4 5.84 normal random 0.2 0.9 14'
     # '207000 8.5 0.84 normal random 0.5 100 14'
-    '1000005 3.105520472 25.34520973 normal random 0.1524629001 1512.433913 14'         # webbase-1M
+
+    # '1000005 3.105520472 25.34520973 normal random 0.1524629001 1512.433913 14'         # webbase-1M
 
     # '207000 8.5 0.84 normal random 1.0 14'
     # '207000 4 0.84 normal random 1.0 14'

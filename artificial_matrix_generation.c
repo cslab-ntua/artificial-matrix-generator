@@ -117,6 +117,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	double * bandwidths;
 	double * scatters;
 
+	debug("arguments: %ld %ld %g %g %s %u %s %g %g\n", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw_scaled, skew);
+
 	offsets = (typeof(offsets)) malloc((nr_rows+1) * sizeof(*offsets));
 	csr = (typeof(csr)) malloc(sizeof(*csr));
 	csr->nr_rows = nr_rows;
@@ -139,13 +141,24 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	c_bound2 = MAX*MAX / (2 * std_nnz_per_row*std_nnz_per_row);
 	C = (c_bound1 > c_bound2) ? c_bound1 : c_bound2;
 
-	avg_exp = MAX / C;
-	std_exp = sqrt(avg_exp*avg_exp * (C/2 - 1));
+	if (C > 2)
+	{
+		avg_exp = MAX / C;
+		std_exp = sqrt(avg_exp*avg_exp * (C/2 - 1));
 
-	avg_norm = avg_nnz_per_row - MAX / C;
-	std_norm = sqrt(std_nnz_per_row*std_nnz_per_row - std_exp*std_exp);
-	if (avg_norm / 3 < std_norm)
-		std_norm = avg_norm / 3;
+		avg_norm = avg_nnz_per_row - MAX / C;
+		std_norm = sqrt(std_nnz_per_row*std_nnz_per_row - std_exp*std_exp);
+		if (avg_norm / 3 < std_norm)
+			std_norm = avg_norm / 3;
+	}
+	else
+	{
+		C = 0;
+		avg_exp = 0;
+		std_exp = 0;
+		avg_norm = avg_nnz_per_row;
+		std_norm = std_nnz_per_row;
+	}
 
 	debug("C = %g\n", C);
 	debug("avg exp = %g\n", avg_exp);
