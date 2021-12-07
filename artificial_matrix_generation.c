@@ -42,7 +42,7 @@ expected_bw(double B, double n)
 	long i;
 	E = 0;
 	for (i=n;i<=(long)B;i++)
-		E += pdf(i, B, n) * i;
+		E += pdf(i, B, n) * (double)i;
 	return E;
 }
 
@@ -53,8 +53,13 @@ calculate_new_bw(double B, double n)
 {
 	double E, E_new, ratio, B_new;
 	E = expected_bw(B, n);
-	ratio = E / B;
-	B_new = B / ratio;
+	if (E == 0)     // Bandwidth given was smaller than n.
+		B_new = n;
+	else
+	{
+		ratio = E / B;
+		B_new = B / ratio;
+	}
 	E_new = expected_bw(B_new, n);
 	printf("n = %g, bw = %g, predicted bw = %g, corrected bw = %g, new prediction = %g\n", n, B, E, B_new, E_new);
 	return B_new;
@@ -149,13 +154,13 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		_Pragma("omp barrier")
 		_Pragma("omp single")
 		{
+			long tmp;
 			total_sum = 0;
 			for (i=0;i<num_threads;i++)
 			{
-				degree = t_base[i];
+				tmp = t_base[i];
 				t_base[i] = total_sum;
-				total_sum += degree;
-
+				total_sum += tmp;
 				if (t_max_degree[i] > max_degree)
 					max_degree = t_max_degree[i];
 			}
@@ -187,6 +192,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 		long bound_l, bound_r, bound_relaxed_l, bound_relaxed_r, range, half_range;
 		double b, s;
+		long retries;
+		long d1, d2;
 
 		bound_l = 0;
 		bound_r = nr_cols;
@@ -205,7 +212,6 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 			range = floor(bw_corrected + 0.5);
 			// range = floor(bw_scaled * nr_cols + 0.5);
-			// range = floor(2 * bw_scaled * nr_cols + 0.5);
 			if (range < degree)                           // At this point: range >= degree > 0
 				range = degree;
 			half_range = range / 2;
@@ -237,6 +243,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);
+			d1 = 0;
+			d2 = 0;
 			for (j=j_s;j<j_e;j++)
 			{
 				k = random_uniform_integer(rs, bound_relaxed_l, bound_relaxed_r);
@@ -244,12 +252,31 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 					k = bound_r -1;
 				else if (k < bound_l)
 					k = bound_l;
+				retries = 0;
 				while (!ordered_set_insert(OS, k))
 				{
-					// k = random_uniform_integer(rs, bound_l, bound_r);
-					k++;
-					if (k >= bound_r)
-						k = bound_l;
+					retries++;
+					if (retries < 20)   // If we fail 20 times, we can assume it is nearly filled (e.g. 1/2 ^ 20 = 1/1048576 for half filled bandwidth).
+					{
+						// Random retries give surprisingly better results, compared to searching serially (e.g. 5 vs 45 sec for filled bandwidth), guess better statistical properties.
+						k = random_uniform_integer(rs, bound_l, bound_r);
+						// k++;
+						// if (k >= bound_r)
+							// k = bound_l;
+					}
+					else
+					{
+						if (d1 < d2)
+						{
+							k = bound_l + d1;
+							d1++;
+						}
+						else
+						{
+							k = bound_r - d2;
+							d2++;
+						}
+					}
 				}
 
 				values[j] = random_uniform(rs, 0, 1);

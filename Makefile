@@ -20,7 +20,7 @@ LIBSRC =
 ifdef C_LIB_PATH
     library = ${C_LIB_PATH}
 
-    LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c
+    LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
 
     CFLAGS += -I$(library) -D'PLOT'
 endif

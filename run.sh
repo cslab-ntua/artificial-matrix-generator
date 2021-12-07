@@ -14,9 +14,9 @@ export GOMP_CPU_AFFINITY="0-$((${cores}-1))"
 
 params=(
     # '207000 8.5 0.84 normal random 1.0 14'
-    # '207000 4 0.84 normal random 1.0 14'
+    '207000 4 0.84 normal random 1.0 14'
     # '207000 4 0.84 normal random 0.2 14'
-    '207000 4 0.84 normal diagonal 0.2 14'
+    # '207000 4 0.84 normal diagonal 0.2 14'
     # '207000 20 0.84 normal diagonal 0.5 14'
 
     # '4000 5 2 normal diagonal 0.05 14'
