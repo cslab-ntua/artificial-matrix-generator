@@ -23,6 +23,10 @@ struct csr_matrix {
 
 	double avg_nnz_per_row;
 	double std_nnz_per_row;
+	double min_nnz_per_row;
+	double max_nnz_per_row;
+
+	double skew;
 
 	int seed;
 	char * distribution;
@@ -37,7 +41,7 @@ struct csr_matrix {
 
 
 int free_csr_matrix(struct csr_matrix * csr);
-struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled);
+struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew);
 void csr_matrix_print(struct csr_matrix * csr);
 void csr_matrix_write_mtx(struct csr_matrix * csr, char * file_out);
 

@@ -29,15 +29,17 @@ ifdef C_LIB_PATH
 endif
 
 
-all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o artificial_matrix_generation_double.so
+all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o artificial_matrix_generation_double.so artificial_matrix_generation_float.so
 
 
 artificial_matrix.exe: artificial_matrix.c artificial_matrix_generation.c ordered_set.c $(LIBSRC)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -D'VERBOSE' $^ -o $@ $(LDFLAGS)
+
 
 artificial_matrix_generation_double.so: artificial_matrix_generation.c ordered_set.o
 	$(CC) $(CFLAGS) -D'ValueType=double' $(SOFLAGS) $^ -o $@ $(LDFLAGS)
-
+artificial_matrix_generation_float.so: artificial_matrix_generation.c ordered_set.o
+	$(CC) $(CFLAGS) -D'ValueType=float' $(SOFLAGS) $^ -o $@ $(LDFLAGS)
 
 
 artificial_matrix_generation_double.o: artificial_matrix_generation.c

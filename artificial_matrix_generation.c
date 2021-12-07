@@ -10,11 +10,23 @@
 #include "artificial_matrix_generation.h"
 
 
-#define error(fmt, ...)                      \
-do {                                         \
-	printf(stderr, fmt, __VA_ARGS__);    \
-	exit(1);                             \
+#define error(fmt, ...)                       \
+do {                                          \
+	fprintf(stderr, fmt, __VA_ARGS__);    \
+	exit(1);                              \
 } while (0)
+
+
+#ifdef VERBOSE
+
+	#define debug(fmt, ...)              \
+	do {                                 \
+		printf(fmt, __VA_ARGS__);    \
+	} while (0)
+
+#else
+	#define debug(...)
+#endif
 
 
 static double mb_list[] =  {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -64,7 +76,7 @@ static
 double
 calculate_new_bw(double B, double n)
 {
-	double E, E_new, ratio, B_new;
+	double E, ratio, B_new;
 	E = expected_bw(B, n);
 	if (E == 0)     // Bandwidth given was smaller than n.
 		B_new = n;
@@ -73,8 +85,7 @@ calculate_new_bw(double B, double n)
 		ratio = E / B;
 		B_new = B / ratio;
 	}
-	E_new = expected_bw(B_new, n);
-	printf("n = %g, bw = %g, predicted bw = %g, corrected bw = %g, new prediction = %g\n", n, B, E, B_new, E_new);
+	debug("n = %g, bw = %g, predicted bw = %g, corrected bw = %g, new prediction = %g\n", n, B, E, B_new, expected_bw(B_new, n));
 	return B_new;
 }
 
@@ -83,7 +94,7 @@ calculate_new_bw(double B, double n)
  * bw_scaled: scaled target bandwidth ([0,1]), as a fraction of row size (number of columns).
  */
 struct csr_matrix *
-artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled)
+artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew)
 {
 	int num_threads = omp_get_max_threads();
 	int * offsets;
@@ -94,16 +105,17 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	ValueType * values;
 	double bw_corrected;
 
+	double MAX;
+	double C, c_bound1, c_bound2;
+	double avg_exp, std_exp;
+	double avg_norm, std_norm;
+
 	long t_max_degree[num_threads];
 	long max_degree = 0;
 
 	double * degrees;
 	double * bandwidths;
 	double * scatters;
-
-	printf("args: %ld, %ld, %lf, %lf, %s, %u, %s, %lf\n", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw_scaled);
-	// printf("args: %ld\n", nr_rows);
-	// exit(0);
 
 	offsets = (typeof(offsets)) malloc((nr_rows+1) * sizeof(*offsets));
 	csr = (typeof(csr)) malloc(sizeof(*csr));
@@ -120,14 +132,37 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	bandwidths = (typeof(bandwidths)) malloc(nr_rows * sizeof(*bandwidths));
 	scatters = (typeof(scatters)) malloc(nr_rows * sizeof(*scatters));
 
+
+	// Calculate parameters from the addition of the exponential.
+	MAX = avg_nnz_per_row * (1 + skew);
+	c_bound1 = MAX / avg_nnz_per_row;
+	c_bound2 = MAX*MAX / (2 * std_nnz_per_row*std_nnz_per_row);
+	C = (c_bound1 > c_bound2) ? c_bound1 : c_bound2;
+
+	avg_exp = MAX / C;
+	std_exp = sqrt(avg_exp*avg_exp * (C/2 - 1));
+
+	avg_norm = avg_nnz_per_row - MAX / C;
+	std_norm = sqrt(std_nnz_per_row*std_nnz_per_row - std_exp*std_exp);
+	if (avg_norm / 3 < std_norm)
+		std_norm = avg_norm / 3;
+
+	debug("C = %g\n", C);
+	debug("avg exp = %g\n", avg_exp);
+	debug("std exp = %g\n", std_exp);
+	debug("avg normal = %g\n", avg_norm);
+	debug("std normal = %g\n", std_norm);
+	debug("halflife = %g\n", log(2) * (nr_rows / C));
+
+
 	_Pragma("omp parallel")
 	{
 		int tnum = omp_get_thread_num();
 		struct Random_State * rs;
 		long reseed_period;
 		long i, j, k, i_s, i_e, j_s, j_e, per_t_len;
-		double rand_val;
-		long degree;
+		double e, norm;
+		double degree;
 		long sum, total_sum;
 		long local_max_degree = 0;
 		struct ordered_set * OS;
@@ -154,8 +189,11 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		{
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);    // We need reproducible results, independently of the number of threads, but random_r() is too slow (even x10 for many, small rows)!
-			rand_val = random_normal(rs, avg_nnz_per_row, std_nnz_per_row);
-			degree = floor((rand_val > 0 ? rand_val : 0) + 0.5);
+			e = MAX * exp(-C/nr_cols * (double)i);
+			// norm = random_normal(rs, avg_nnz_per_row, std_nnz_per_row);
+			norm = random_normal(rs, avg_norm, std_norm);
+			degree = e + norm;
+			degree = (degree > 0) ? floor(degree + 0.5) : 0;
 			if (degree > nr_cols)
 				degree = nr_cols;
 			if (degree > local_max_degree)
@@ -193,7 +231,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			csr->density = ((double) nnz) / ((double) nr_rows * nr_cols) * 100;
 			csr->mem_footprint = (nnz * (sizeof(*values) + sizeof(*col_ind)) +  (nr_rows + 1) * sizeof(*offsets)) / ((double) 1024 * 1024);
 
-			bw_corrected = calculate_new_bw(bw_scaled * nr_cols, floor(((double) nnz) / nr_rows + 0.5));      // Recalculate banwidth with the actual avg nnz per row.
+			csr->avg_nnz_per_row = ((double) nnz) / nr_rows;
+			bw_corrected = calculate_new_bw(bw_scaled * nr_cols, floor(csr->avg_nnz_per_row + 0.5));      // Recalculate banwidth with the actual avg nnz per row.
 
 			for (i=0;i<mb_list_n;i++)
 				if (csr->mem_footprint < mb_list[i])
@@ -323,6 +362,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 	csr->avg_nnz_per_row = ((double) nnz) / nr_rows;
 	csr->std_nnz_per_row = matrix_std_base(degrees, nr_rows, csr->avg_nnz_per_row);
+	matrix_min_max(degrees, nr_rows, &csr->min_nnz_per_row, &csr->max_nnz_per_row);
+	csr->skew = (csr->max_nnz_per_row - csr->avg_nnz_per_row) / csr->avg_nnz_per_row;
 
 	csr->avg_bw = matrix_mean(bandwidths, nr_rows);
 	csr->std_bw = matrix_std_base(bandwidths, nr_rows, csr->avg_bw);

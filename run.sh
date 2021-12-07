@@ -13,7 +13,8 @@ export GOMP_CPU_AFFINITY="0-$((${cores}-1))"
 
 
 params=(
-    '207000 4 5.84 normal random 0.2 14'
+    # '207000 8.5 0.84 normal random 0.5 100 14'
+    '1000005 3.105520472 25.34520973 normal random 0.1524629001 1512.433913 14'         # webbase-1M
 
     # '207000 8.5 0.84 normal random 1.0 14'
     # '207000 4 0.84 normal random 1.0 14'
@@ -56,7 +57,7 @@ params=(
 # rows=4690000, cols=4690000, nnz=16451137, avg_nnz_per_row=3.50771, std_nnz_per_row=1.60551, avg_bw=0.494433, std_bw=0.283955, avg_sc=19.1105, std_sc=6310.95, 
 
 for p in "${params[@]}"; do
-    echo $p
+    echo "parameters: $p"
     ./artificial_matrix.exe $p
     echo
 done

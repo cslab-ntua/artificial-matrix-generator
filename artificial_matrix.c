@@ -91,6 +91,7 @@ main(int argc, char **argv)
 	char * distribution;
 	char * placement;
 	double bw;
+	double skew;
 
 	if (argc < 6)
 	{
@@ -105,13 +106,14 @@ main(int argc, char **argv)
 	distribution = argv[4];
 	placement = argv[5];
 	bw = atof(argv[6]);
-	seed = atoi(argv[7]);
+	skew = atof(argv[7]);
+	seed = atoi(argv[8]);
 
 	#ifdef PLOT
 	double time;
 	time = time_it(1,
 	#endif
-		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw);
+		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew);
 	#ifdef PLOT
 	);
 	printf("time generate matrix = %g\n", time);
@@ -140,6 +142,9 @@ main(int argc, char **argv)
 	printf("std_bw=%g, ", csr->std_bw);
 	printf("avg_sc=%g, ", csr->avg_sc);
 	printf("std_sc=%g, ", csr->std_sc);
+	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
+	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
+	printf("skew=%g, ", csr->skew);
 	printf("\n");
  
 	free_csr_matrix(csr);
