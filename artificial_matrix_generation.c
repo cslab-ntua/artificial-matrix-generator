@@ -319,7 +319,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			{
 				k = random_uniform_integer(rs, bound_relaxed_l, bound_relaxed_r);
 				if (k >= bound_r)
-					k = bound_r -1;
+					k = bound_r - 1;
 				else if (k < bound_l)
 					k = bound_l;
 				retries = 0;
@@ -331,7 +331,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 						// Random retries give surprisingly better results, compared to searching serially (e.g. 5 vs 45 sec for filled bandwidth), guess better statistical properties.
 						k = random_uniform_integer(rs, bound_relaxed_l, bound_relaxed_r);
 						if (k >= bound_r)
-							k = bound_r -1;
+							k = bound_r - 1;
 						else if (k < bound_l)
 							k = bound_l;
 						// k = random_uniform_integer(rs, bound_l, bound_r);
@@ -348,7 +348,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 						}
 						else
 						{
-							k = bound_r - d2;
+							k = bound_r - d2 - 1;
 							d2++;
 						}
 					}
