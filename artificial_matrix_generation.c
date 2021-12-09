@@ -59,9 +59,10 @@ pdf(double x, double B, double n)
 	return a * b;
 }
 
+__attribute__((unused))
 static
 double
-expected_bw(double B, double n)
+expected_bw_slow(double B, double n)
 {
 	double E;
 	long i;
@@ -74,9 +75,36 @@ expected_bw(double B, double n)
 
 static
 double
+expected_bw(double B, double n)
+{
+	double E;
+	long i;
+	double a, b, b_e, x;
+
+	b_e = 0;
+	for (i=0;i<(long)n;i++)
+		b_e += log2(n-i) - log2(B-i);
+	b = pow(2, b_e);
+
+	E = 0;
+	for (i=n;i<=(long)B;i++)
+	{
+		x = i;
+		a = (B - x + 1) * n/x * (n-1)/(x-1);
+		E += a * b * (double)i;
+		b_e += log2(x+1) - log2(x+1-n);
+		b = pow(2, b_e);
+	}
+	return E;
+}
+
+
+static
+double
 calculate_new_bw(double B, double n)
 {
 	double E, ratio, B_new;
+	// E = expected_bw_slow(B, n);
 	E = expected_bw(B, n);
 	if (E == 0)     // Bandwidth given was smaller than n.
 		B_new = n;
@@ -138,10 +166,19 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	// Calculate parameters from the addition of the exponential.
 	MAX = avg_nnz_per_row * (1 + skew);
 	c_bound1 = MAX / avg_nnz_per_row;
-	c_bound2 = MAX*MAX / (2 * std_nnz_per_row*std_nnz_per_row);
+	c_bound2 = (std_nnz_per_row > 0) ? MAX*MAX / (2 * std_nnz_per_row*std_nnz_per_row) : 0;
 	C = (c_bound1 > c_bound2) ? c_bound1 : c_bound2;
 
-	if (C > 2)
+	if (C <= 2 || skew < 1)  // For C<=2 the models don't work. Also for skew < 1 we have terrible estimations.
+	{
+		MAX = 0;
+		C = 0;
+		avg_exp = 0;
+		std_exp = 0;
+		avg_norm = avg_nnz_per_row;
+		std_norm = std_nnz_per_row;
+	}
+	else
 	{
 		avg_exp = MAX / C;
 		std_exp = sqrt(avg_exp*avg_exp * (C/2 - 1));
@@ -150,15 +187,6 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		std_norm = sqrt(std_nnz_per_row*std_nnz_per_row - std_exp*std_exp);
 		if (avg_norm / 3 < std_norm)
 			std_norm = avg_norm / 3;
-	}
-	else  // ignore exponential
-	{
-		MAX = 0;
-		C = 0;
-		avg_exp = 0;
-		std_exp = 0;
-		avg_norm = avg_nnz_per_row;
-		std_norm = std_nnz_per_row;
 	}
 
 	debug("C = %g\n", C);
@@ -203,7 +231,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		{
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);    // We need reproducible results, independently of the number of threads, but random_r() is too slow (even x10 for many, small rows)!
-			e = MAX * exp(-C/nr_cols * (double)i);
+			e = MAX * exp(-C/nr_rows * (double)i);
 			// norm = random_normal(rs, avg_nnz_per_row, std_nnz_per_row);
 			norm = random_normal(rs, avg_norm, std_norm);
 			degree = e + norm;

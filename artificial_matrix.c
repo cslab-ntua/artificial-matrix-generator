@@ -92,6 +92,8 @@ main(int argc, char **argv)
 	char * placement;
 	double bw;
 	double skew;
+	char * matrix_name = "";
+	long i;
 
 	if (argc < 6)
 	{
@@ -99,15 +101,22 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-	nr_rows = atoi(argv[1]);
-	nr_cols = nr_rows;
-	avg_nnz_per_row = atof(argv[2]);
-	std_nnz_per_row = atof(argv[3]);
-	distribution = argv[4];
-	placement = argv[5];
-	bw = atof(argv[6]);
-	skew = atof(argv[7]);
-	seed = atoi(argv[8]);
+	i = 1;
+	nr_rows = atoi(argv[i++]);
+	nr_cols = atoi(argv[i++]);
+	avg_nnz_per_row = atof(argv[i++]);
+	std_nnz_per_row = atof(argv[i++]);
+	distribution = argv[i++];
+	placement = argv[i++];
+	bw = atof(argv[i++]);
+	skew = atof(argv[i++]);
+	seed = atoi(argv[i++]);
+	if (argc >= i)
+	{
+		matrix_name = argv[i++];
+		printf("matrix: %s\n", matrix_name);
+	}
+
 
 	#ifdef PLOT
 	double time;
@@ -122,7 +131,7 @@ main(int argc, char **argv)
 	// csr_matrix_write_mtx(csr, "out.mtx");
 
 	#ifdef PLOT
-		plot_csr(csr, "csr.png");
+		// plot_csr(csr, "csr.png");
 	#endif
 
 	printf("synthetic, ");
@@ -146,6 +155,9 @@ main(int argc, char **argv)
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
 	printf("\n");
+
+	fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew, seed);
+	fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw, csr->skew, csr->seed);
  
 	free_csr_matrix(csr);
 	return 0;
