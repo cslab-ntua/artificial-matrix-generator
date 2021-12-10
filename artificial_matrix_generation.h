@@ -31,12 +31,16 @@ struct csr_matrix {
 	int seed;
 	char * distribution;
 	char * placement;
-	double bandwidth_scaled;
 
 	double avg_bw;
 	double std_bw;
+	double avg_bw_scaled;
+	double std_bw_scaled;
+
 	double avg_sc;
 	double std_sc;
+	double avg_sc_scaled;
+	double std_sc_scaled;
 };
 
 

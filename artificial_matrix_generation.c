@@ -156,7 +156,6 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	csr->placement = placement;
 	if (bw_scaled > 1)                    // bandwidth <= number of columns
 		bw_scaled = 1;
-	csr->bandwidth_scaled = bw_scaled;
 
 	degrees = (typeof(degrees)) malloc(nr_rows * sizeof(*degrees));
 	bandwidths = (typeof(bandwidths)) malloc(nr_rows * sizeof(*bandwidths));
@@ -388,7 +387,6 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			ordered_set_sort(OS, &col_ind[j_s]);
 
 			b = col_ind[j_e-1] - col_ind[j_s] + 1;
-			b /= nr_cols;
 			bandwidths[i] = b;
 
 			// s = (b > 0) ? degree / b : 0;
@@ -409,9 +407,13 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 	csr->avg_bw = matrix_mean(bandwidths, nr_rows);
 	csr->std_bw = matrix_std_base(bandwidths, nr_rows, csr->avg_bw);
+	csr->avg_bw_scaled = csr->avg_bw / nr_cols;
+	csr->std_bw_scaled = csr->std_bw / nr_cols;
 
 	csr->avg_sc = matrix_mean(scatters, nr_rows);
 	csr->std_sc = matrix_std_base(scatters, nr_rows, csr->avg_sc);
+	csr->avg_sc_scaled = csr->avg_sc * nr_cols;
+	csr->std_sc_scaled = csr->std_sc * nr_cols;
 
 	free(degrees);
 	free(bandwidths);

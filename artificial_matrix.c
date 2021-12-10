@@ -137,7 +137,6 @@ main(int argc, char **argv)
 	printf("synthetic, ");
 	printf("distribution=%s, ", csr->distribution);
 	printf("placement=%s, ", csr->placement);
-	printf("bandwidth_scaled=%g, ", csr->bandwidth_scaled);
 	printf("seed=%d, ", csr->seed);
 	printf("rows=%d, ", csr->nr_rows);
 	printf("cols=%d, ", csr->nr_cols);
@@ -149,15 +148,19 @@ main(int argc, char **argv)
 	printf("std_nnz_per_row=%g, ", csr->std_nnz_per_row);
 	printf("avg_bw=%g, ", csr->avg_bw);
 	printf("std_bw=%g, ", csr->std_bw);
+	printf("avg_bw_scaled=%g, ", csr->avg_bw_scaled);
+	printf("std_bw_scaled=%g, ", csr->std_bw_scaled);
 	printf("avg_sc=%g, ", csr->avg_sc);
 	printf("std_sc=%g, ", csr->std_sc);
+	printf("avg_sc_scaled=%g, ", csr->avg_sc_scaled);
+	printf("std_sc_scaled=%g, ", csr->std_sc_scaled);
 	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
 	printf("\n");
 
 	fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew, seed);
-	fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw, csr->skew, csr->seed);
+	fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, csr->seed);
  
 	free_csr_matrix(csr);
 	return 0;
