@@ -17,17 +17,16 @@ SOFLAGS = -fPIC -shared
 
 LDFLAGS = -lm
 
+# Test for needed library files.
+export CPATH=
 
 LIBSRC =
 
-ifdef C_LIB_PATH
-    library = ${C_LIB_PATH}
+library = ./lib
 
-    LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
+LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
 
-    CFLAGS += -I$(library) -D'PLOT'
-    # CFLAGS += -I$(library) -D'PLOT' -D'VERBOSE'
-endif
+CFLAGS += -I$(library) -D'PLOT'
 
 
 all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o artificial_matrix_generation_double.so artificial_matrix_generation_float.so

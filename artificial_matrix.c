@@ -4,80 +4,166 @@
 #include <omp.h>
 
 #include "artificial_matrix_generation.h"
+#include "matrix_util.h"
 
 
-#ifdef PLOT
+#include "time_it.h"
+#include "plot/plot.h"
 
-	#include "time_it.h"
-	#include "plot/plot.h"
+double
+get_row(void * A, int pos)
+{
+	struct csr_matrix * csr = A;
+	long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos);
+	if (csr->row_ptr[i] > pos)
+		i--;
+	return (double) i;
+}
 
-	double
-	get_row(void * A, int pos)
+
+double
+get_col(void * A, int pos)
+{
+	struct csr_matrix * csr = A;
+	return (double) csr->col_ind[pos];
+}
+
+
+double
+get_degree(void * A, int i)
+{
+	struct csr_matrix * csr = A;
+	return (double) csr->row_ptr[i+1] -  csr->row_ptr[i];
+}
+
+
+void
+plot_csr(struct csr_matrix * csr, char * matrix_name, double * neigh_distances_freq_perc)
+{
+	long num_pixels = 1024;
+	long num_pixels_x, num_pixels_y;
+	long buf_n = strlen(matrix_name) + 1 + 1000;
+	char buf[buf_n], buf_title[buf_n];
+
+	if (!strcmp(matrix_name, ""))
+		matrix_name = "csr";
+
+	if (csr->nr_cols < 1024)
 	{
-		struct csr_matrix * csr = A;
-		long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos);
-		if (csr->row_ptr[i] > pos)
-			i--;
-		return (double) i;
+		num_pixels_x = csr->nr_cols;
+		num_pixels_y = csr->nr_rows;
+	}
+	else
+	{
+		num_pixels_x = num_pixels;
+		num_pixels_y = num_pixels;
 	}
 
+	snprintf(buf, buf_n, "figures/%s-artificial.png", matrix_name);
+	snprintf(buf_title, buf_n, "%s-artificial", matrix_name);
+	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (csr, csr, NULL, csr->nr_nzeros, 0, get_col, get_row),
+		figure_axes_flip_y(_fig);
+		figure_enable_legend(_fig);
+		figure_set_title(_fig, buf_title);
+		figure_set_bounds_x(_fig, 0, csr->nr_cols);
+		figure_set_bounds_y(_fig, 0, csr->nr_rows);
+	);
 
-	double
-	get_col(void * A, int pos)
+	// Plot degree histogram.
+	long num_bins = 10000;
+	snprintf(buf, buf_n, "figures/%s-artificial_degree_distribution.png", matrix_name);
+	snprintf(buf_title, buf_n, "%s-artificial: degree distribution (percentages)", matrix_name);
+	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
+		figure_enable_legend(_fig);
+		figure_set_title(_fig, buf_title);
+		figure_series_type_histogram(_s, num_bins, 1);
+		figure_series_type_barplot(_s);
+	);
+
+	// Plot neighbour distances frequencies.
+	snprintf(buf_title, buf_n, "%s-artificial: neighbour distances frequencies (percentages)", matrix_name);
+	long pos;
+	for (pos=csr->nr_cols-1;pos>0;pos--)
+		if (neigh_distances_freq_perc[pos] != 0)
+			break;
+	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq.png", matrix_name);
+	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+		figure_enable_legend(_fig);
+		figure_set_title(_fig, buf_title);
+		figure_series_type_barplot(_s);
+	);
+	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_100.png", matrix_name);
+	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+		figure_enable_legend(_fig);
+		figure_set_title(_fig, buf_title);
+		figure_series_type_barplot(_s);
+		figure_set_bounds_x(_fig, 0, 100);
+	);
+	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_1000.png", matrix_name);
+	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+		figure_enable_legend(_fig);
+		figure_set_title(_fig, buf_title);
+		figure_series_type_barplot(_s);
+		figure_set_bounds_x(_fig, 0, 1000);
+	);
+}
+
+
+double *
+csr_row_neighbours(struct csr_matrix * csr, long window_size)
+{
+	double * neigh_num = malloc(csr->nr_nzeros * sizeof(*neigh_num));
+	#pragma omp parallel
 	{
-		struct csr_matrix * csr = A;
-		return (double) csr->col_ind[pos];
-	}
-
-
-	double
-	get_degree(void * A, int i)
-	{
-		struct csr_matrix * csr = A;
-		// long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos);
-		// if (csr->row_ptr[i] > pos)
-			// i--;
-		return (double) csr->row_ptr[i+1] -  csr->row_ptr[i];
-	}
-
-
-	void
-	plot_csr(struct csr_matrix * csr, char * file_out)
-	{
-		long num_pixels = 1024;
-		long num_pixels_x, num_pixels_y;
-
-		if (csr->nr_cols < 1024)
+		long i, j, k;
+		#pragma omp for schedule(static)
+		for (i=0;i<csr->nr_nzeros;i++)
+			neigh_num[i] = 0;
+		#pragma omp for schedule(static)
+		for (i=0;i<csr->nr_rows;i++)
 		{
-			num_pixels_x = csr->nr_cols;
-			num_pixels_y = csr->nr_rows;
+			for (j=csr->row_ptr[i];j<csr->row_ptr[i+1];j++)
+			{
+				for (k=j+1;k<csr->row_ptr[i+1];k++)
+				{
+					if (csr->col_ind[k] - csr->col_ind[j] > window_size)
+						break;
+					neigh_num[j]++;
+					neigh_num[k]++;
+				}
+			}
 		}
-		else
-		{
-			num_pixels_x = num_pixels;
-			num_pixels_y = num_pixels;
-		}
-
-		figure_simple_plot(file_out, num_pixels_x, num_pixels_y, (csr, csr, NULL, csr->nr_nzeros, 0, get_col, get_row),
-			figure_enable_legend(_fig);
-			figure_axes_origin_upper_left(_fig);
-			figure_set_bounds_x(_fig, 0, csr->nr_cols);
-			figure_set_bounds_y(_fig, 0, csr->nr_rows);
-		);
-
-		// Plot degree histogram.
-		#if 1
-			long num_bins = 1000;
-			figure_simple_plot("degree_distribution.png", num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
-				figure_enable_legend(_fig);
-				figure_set_title(_fig, "degree distribution");
-				figure_series_type_histogram(_s, num_bins, 1);
-				// figure_set_bounds_x(_fig, -3, 5);
-			);
-		#endif
 	}
+	return neigh_num;
+}
 
-#endif
+
+double *
+csr_neighbours_distances_frequencies(struct csr_matrix * csr)
+{
+	long * frequencies = malloc(csr->nr_cols * sizeof(*frequencies));
+	double * frequencies_percentage = malloc(csr->nr_cols * sizeof(*frequencies_percentage));
+	#pragma omp parallel
+	{
+		long i, j;
+		#pragma omp for schedule(static)
+		for (i=0;i<csr->nr_cols;i++)
+			frequencies[i] = 0;
+		#pragma omp for schedule(static)
+		for (i=0;i<csr->nr_rows;i++)
+		{
+			for (j=csr->row_ptr[i];j<csr->row_ptr[i+1]-1;j++)
+			{
+				__atomic_fetch_add(&frequencies[csr->col_ind[j+1] - csr->col_ind[j]], 1, __ATOMIC_RELAXED);
+			}
+		}
+		#pragma omp for schedule(static)
+		for (i=0;i<csr->nr_cols;i++)
+			frequencies_percentage[i] = ((double) 100 * frequencies[i]) / csr->nr_nzeros;
+	}
+	free(frequencies);
+	return frequencies_percentage;
+}
 
 
 int
@@ -118,21 +204,19 @@ main(int argc, char **argv)
 	}
 
 
-	#ifdef PLOT
 	double time;
 	time = time_it(1,
-	#endif
 		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew);
-	#ifdef PLOT
 	);
 	printf("time generate matrix = %g\n", time);
-	#endif
 
-	// csr_matrix_write_mtx(csr, "out.mtx");
+	long window_size = 64 / sizeof(double) / 2;
+	double * neigh_num = csr_row_neighbours(csr, window_size);
+	double * neigh_distances_freq_perc = csr_neighbours_distances_frequencies(csr);
+	double mean_neigh = matrix_mean(neigh_num, csr->nr_nzeros);
+	double std_neigh = matrix_std_base(neigh_num, csr->nr_nzeros, mean_neigh);
 
-	#ifdef PLOT
-		// plot_csr(csr, "csr.png");
-	#endif
+	plot_csr(csr, matrix_name, neigh_distances_freq_perc);
 
 	printf("synthetic, ");
 	printf("distribution=%s, ", csr->distribution);
@@ -157,11 +241,17 @@ main(int argc, char **argv)
 	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
+	printf("mean neigh num = %g\n", mean_neigh);
+	printf("std neigh num = %g\n", std_neigh);
 	printf("\n");
 
-	fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew, seed);
-	fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%d\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, csr->seed);
+	// fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew);
+	// fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew);
+
+	fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, mean_neigh, std_neigh);
  
+	// csr_matrix_write_mtx(csr, "out.mtx");
+
 	free_csr_matrix(csr);
 	return 0;
 }
