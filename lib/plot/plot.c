@@ -128,14 +128,6 @@ figure_series_init(struct Figure_Series * s, void * x, void * y, void * z, long 
 		)
 {
 	s->N = N;
-
-	s->type_density_map = 0;
-	s->type_histogram = 0;
-	s->histogram_num_bins = 0;
-	s->histogram_in_percentages = 0;
-	s->type_barplot = 0;
-	s->barplot_bar_width = 0;
-
 	if (M != 0)
 	{
 		s->cart_prod = 1;
@@ -147,21 +139,38 @@ figure_series_init(struct Figure_Series * s, void * x, void * y, void * z, long 
 		s->M = N;
 	}
 
+	s->x = x;
+	s->y = y;
+	s->z = z;
+
+	s->x_in_percentages = 0;
+	s->y_in_percentages = 0;
+
 	if (x == NULL)
 		get_x_as_double = id;
 	if (y == NULL)
 		get_y_as_double = id;
-
-	s->x = x;
-	s->y = y;
-	s->z = z;
 	s->get_x_as_double = get_x_as_double;
         s->get_y_as_double = get_y_as_double;
         s->get_z_as_double = get_z_as_double;
+
 	s->color_mapping = figure_color_mapping_heatmap;
 	s->r = 0x00;
 	s->g = 0x00;
 	s->b = 0x00;
+
+	s->type_density_map = 0;
+
+	s->type_histogram = 0;
+	s->histogram_num_bins = 0;
+	s->histogram_in_percentages = 0;
+	s->histogram_in_percentages = 0;
+
+	s->type_barplot = 0;
+	s->barplot_bar_width_fraction = 0.6;
+	s->barplot_max_bar_width = 0;
+	s->barplot_bar_width = 0;
+
 	s->deallocate_data = 0;
 }
 
@@ -372,17 +381,20 @@ convert_to_histogram(struct Figure_Series * s, long num_bins, int plot_percentag
 
 	free(freq);
 
-	int16_t r = s->r;
-	int16_t g = s->g;
-	int16_t b = s->b;
-	int type_barplot = s->type_barplot; // Save it, it might have been set.
-	figure_series_init(s, x, y, NULL, num_bins, 0, gen_d2d, gen_d2d, NULL);
+	s->N = num_bins;
+	s->M = s->N;
+	s->cart_prod = 0;
+	s->x = x;
+	s->y = y;
+	s->z = NULL;
+	if (plot_percentages)
+		s->y_in_percentages = 1;
+	s->get_x_as_double = gen_d2d;
+	s->get_y_as_double = gen_d2d;
+	s->get_z_as_double = NULL;
 	s->type_histogram = 1;
 	s->histogram_num_bins = num_bins;
-	s->type_barplot = type_barplot;
-	s->r = r;
-	s->g = g;
-	s->b = b;
+	s->histogram_in_percentages = plot_percentages;
 	s->deallocate_data = 1;
 }
 
@@ -390,15 +402,15 @@ convert_to_histogram(struct Figure_Series * s, long num_bins, int plot_percentag
 void
 figure_series_type_histogram_base(struct Figure_Series * s, long num_bins, int plot_percentages)
 {
-	s->histogram_in_percentages = plot_percentages;
 	convert_to_histogram(s, num_bins, plot_percentages);
 }
 
 
 void
-figure_series_type_barplot_base(struct Figure_Series * s, double bar_width_fraction)
+figure_series_type_barplot_base(struct Figure_Series * s, double max_bar_width, double bar_width_fraction)
 {
 	s->type_barplot = 1;
+	s->barplot_max_bar_width = max_bar_width;
 	s->barplot_bar_width_fraction = bar_width_fraction;
 }
 
@@ -692,6 +704,35 @@ series_plot_density_map(struct Figure * fig, struct Figure_Series * s, struct Pi
 //==========================================================================================================================================
 
 
+__attribute__((unused))
+static
+double
+MATRIX_METRICS_closest_pair_distance(void * A, long N, double (* get_val_as_double)(void * A, int i))
+{
+	double * B = malloc(N * sizeof(*B));
+	double dist, min;
+	long i;
+	if (N <= 1)
+		return 0;
+	int cmpfunc(const void * a, const void * b)
+	{
+		return (*(double *)a > *(double *)b) ? 1 : (*(double *)a < *(double *)b) ? -1 : 0;
+	}
+	for (i=0;i<N;i++)
+		B[i] = get_val_as_double(A, i);
+	qsort(B, N, sizeof(*B), cmpfunc);
+	min = fabs(B[1] - B[0]);
+	for (i=0;i<N-1;i++)
+	{
+		dist = fabs(B[i+1] - B[i]);
+		if (dist < min)
+			min = dist;
+	}
+	free(B);
+	return min;
+}
+
+
 static inline
 void
 calc_series_bounds(struct Figure_Series * s)
@@ -715,8 +756,6 @@ calc_series_bounds(struct Figure_Series * s)
 		long n = s->cart_prod ? s->M * s->N : s->N;
 		matrix_min_max(s->z, n, &s->z_min, &s->z_max, s->get_z_as_double);
 	}
-	long num_elem = (s->cart_prod) ? s->M*s->N : s->N;
-	s->barplot_bar_width = s->barplot_bar_width_fraction * (s->x_max - s->x_min) / num_elem;
 }
 
 
@@ -763,6 +802,28 @@ calc_figure_bounds(struct Figure * fig)
 		{
 			fig->z_min = (s->z_min < fig->z_min) ? s->z_min : fig->z_min;
 			fig->z_max = (s->z_max > fig->z_max) ? s->z_max : fig->z_max;
+		}
+	}
+
+	fig->x_in_percentages = 1;
+	fig->y_in_percentages = 1;
+	for (i=0;i<fig->num_series;i++)
+	{
+		s = &fig->series[i];
+
+		// The labels will have a percentage sign, if all series are in percentages.
+		fig->x_in_percentages &= s->x_in_percentages;
+		fig->y_in_percentages &= s->y_in_percentages;
+
+		if (s->type_barplot)
+		{
+			double min_dist = MATRIX_METRICS_closest_pair_distance(s->x, s->N, s->get_x_as_double);
+			// printf("min dist = %lf\n", min_dist);
+			// printf("barplot_max_bar_width = %lf\n", s->barplot_max_bar_width);
+			if (s->barplot_max_bar_width > 0 && s->barplot_max_bar_width < min_dist)
+				min_dist = s->barplot_max_bar_width;
+			s->barplot_bar_width = s->barplot_bar_width_fraction * min_dist;
+			// printf("barplot_bar_width = %lf\n", s->barplot_bar_width);
 		}
 	}
 }

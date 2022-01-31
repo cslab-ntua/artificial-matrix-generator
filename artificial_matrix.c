@@ -14,7 +14,7 @@ double
 get_row(void * A, int pos)
 {
 	struct csr_matrix * csr = A;
-	long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos);
+	long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos, NULL, NULL);
 	if (csr->row_ptr[i] > pos)
 		i--;
 	return (double) i;
@@ -41,23 +41,9 @@ void
 plot_csr(struct csr_matrix * csr, char * matrix_name, double * neigh_distances_freq_perc)
 {
 	long num_pixels = 1024;
-	long num_pixels_x, num_pixels_y;
+	long num_pixels_x = num_pixels, num_pixels_y = num_pixels;
 	long buf_n = strlen(matrix_name) + 1 + 1000;
 	char buf[buf_n], buf_title[buf_n];
-
-	if (!strcmp(matrix_name, ""))
-		matrix_name = "csr";
-
-	if (csr->nr_cols < 1024)
-	{
-		num_pixels_x = csr->nr_cols;
-		num_pixels_y = csr->nr_rows;
-	}
-	else
-	{
-		num_pixels_x = num_pixels;
-		num_pixels_y = num_pixels;
-	}
 
 	snprintf(buf, buf_n, "figures/%s-artificial.png", matrix_name);
 	snprintf(buf_title, buf_n, "%s-artificial", matrix_name);
@@ -178,6 +164,7 @@ main(int argc, char **argv)
 	char * placement;
 	double bw;
 	double skew;
+	double avg_num_neighbours;
 	char * matrix_name = "";
 	long i;
 
@@ -196,29 +183,36 @@ main(int argc, char **argv)
 	placement = argv[i++];
 	bw = atof(argv[i++]);
 	skew = atof(argv[i++]);
+	avg_num_neighbours = atof(argv[i++]);
 	seed = atoi(argv[i++]);
 	if (argc >= i)
 	{
 		matrix_name = argv[i++];
 		printf("matrix: %s\n", matrix_name);
 	}
+	else
+		matrix_name = "csr";
 
 
 	double time;
 	time = time_it(1,
-		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew);
+		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew, avg_num_neighbours);
 	);
 	printf("time generate matrix = %g\n", time);
 
-	long window_size = 64 / sizeof(double) / 2;
+	long window_size;  // Distance from left and right.
+	// window_size = 64 / sizeof(double) / 2;
+	// window_size = 8;
+	// window_size = 4;
+	window_size = 1;
 	double * neigh_num = csr_row_neighbours(csr, window_size);
-	double * neigh_distances_freq_perc = csr_neighbours_distances_frequencies(csr);
 	double mean_neigh = matrix_mean(neigh_num, csr->nr_nzeros);
 	double std_neigh = matrix_std_base(neigh_num, csr->nr_nzeros, mean_neigh);
 
-	plot_csr(csr, matrix_name, neigh_distances_freq_perc);
+	// double * neigh_distances_freq_perc = csr_neighbours_distances_frequencies(csr);
+	// plot_csr(csr, matrix_name, neigh_distances_freq_perc);
 
-	printf("synthetic, ");
+	printf("%s, ", matrix_name);
 	printf("distribution=%s, ", csr->distribution);
 	printf("placement=%s, ", csr->placement);
 	printf("seed=%d, ", csr->seed);
@@ -241,14 +235,15 @@ main(int argc, char **argv)
 	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
-	printf("mean neigh num = %g\n", mean_neigh);
-	printf("std neigh num = %g\n", std_neigh);
+	printf("mean neigh num = %g, ", mean_neigh);
+	printf("std neigh num = %g, ", std_neigh);
 	printf("\n");
 
 	// fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew);
 	// fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew);
 
-	fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, mean_neigh, std_neigh);
+	// fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, mean_neigh, std_neigh);
+	fprintf(stderr, "%lf\t%lf\n", mean_neigh, std_neigh);
  
 	// csr_matrix_write_mtx(csr, "out.mtx");
 

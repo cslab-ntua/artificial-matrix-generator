@@ -25,18 +25,6 @@ struct Figure_Series {
 	long M;
 	int cart_prod;
 
-	// Occurence density map.
-	int type_density_map;
-
-	// Histogram.
-	int type_histogram;
-	long histogram_num_bins;
-	int histogram_in_percentages;
-
-	int type_barplot;
-	double barplot_bar_width_fraction;
-	double barplot_bar_width;
-
 	void * x;
 	void * y;
 	void * z;
@@ -48,6 +36,9 @@ struct Figure_Series {
 	double z_min;
 	double z_max;
 
+	int x_in_percentages;
+	int y_in_percentages;
+
 	double (* get_x_as_double)(void * x, int i);
 	double (* get_y_as_double)(void * y, int i);
 	double (* get_z_as_double)(void * z, int i);
@@ -56,6 +47,20 @@ struct Figure_Series {
 	int16_t r;
 	int16_t g;
 	int16_t b;
+
+	// Occurence density map.
+	int type_density_map;
+
+	// Histogram.
+	int type_histogram;
+	long histogram_num_bins;
+	int histogram_in_percentages;
+
+	// Barplot.
+	int type_barplot;
+	double barplot_bar_width_fraction;
+	double barplot_max_bar_width;
+	double barplot_bar_width;
 
 	int deallocate_data;     // Whether to free x, y, z at destructor.
 };
@@ -81,6 +86,9 @@ struct Figure {
 	double x_step;
 	double y_step;
 	double z_step;
+
+	int x_in_percentages;
+	int y_in_percentages;
 
 	int legend_enabled;
 	char * title;
@@ -119,10 +127,10 @@ do {                                                                            
 	figure_series_type_histogram_base(s, num_bins, DEFAULT_ARG_1(0, ##__VA_ARGS__));    \
 } while (0)
 
-void figure_series_type_barplot_base(struct Figure_Series * s, double bar_width_fraction);
-#define figure_series_type_barplot(s, ... /* bar_width_fraction */)               \
-do {                                                                              \
-	figure_series_type_barplot_base(s, DEFAULT_ARG_1(0.6, ##__VA_ARGS__));    \
+void figure_series_type_barplot_base(struct Figure_Series * s, double max_bar_width, double bar_width_fraction);
+#define figure_series_type_barplot(s, ... /* max_bar_width, bar_width_fraction */)                                 \
+do {                                                                                                               \
+	figure_series_type_barplot_base(s, DEFAULT_ARG_1(0, ##__VA_ARGS__), DEFAULT_ARG_2(0.6, ##__VA_ARGS__));    \
 } while (0)
 
 void figure_color_mapping_geodesics(double val_norm, double val, uint8_t * r_out, uint8_t * g_out, uint8_t * b_out);

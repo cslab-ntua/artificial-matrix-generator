@@ -140,7 +140,7 @@ GENLIB_cpy(char * src, char * dst, int n)
 }
 
 
-// With tgmath.h macros are defined named like the 'double' counterparts of math.h or complex.h.
+// In tgmath.h macros are defined with names like their 'double' counterparts of math.h or complex.h.
 // So we need to explicitly cast to 'double' or 'complex double' to avoid warnings when the type is different (e.g. float).
 
 #define gen_numtostr(str, n, val)                                                                                                \

@@ -122,7 +122,7 @@ calculate_new_bw(double B, double n)
  * bw_scaled: scaled target bandwidth ([0,1]), as a fraction of row size (number of columns).
  */
 struct csr_matrix *
-artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew)
+artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew, double avg_num_neighbours)
 {
 	int num_threads = omp_get_max_threads();
 	int * offsets;
@@ -231,8 +231,15 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			if (i % reseed_period == 0)
 				random_reseed(rs, seed + i);    // We need reproducible results, independently of the number of threads, but random_r() is too slow (even x10 for many, small rows)!
 			e = MAX * exp(-C/nr_rows * (double)i);
+
 			// norm = random_normal(rs, avg_nnz_per_row, std_nnz_per_row);
+
 			norm = random_normal(rs, avg_norm, std_norm);
+			// double k, theta;
+			// k = (avg_norm*avg_norm) / (std_norm*std_norm);
+			// theta = (std_norm*std_norm) / avg_norm;
+			// norm = random_gamma(rs, k, theta);
+
 			degree = e + norm;
 			degree = (degree > 0) ? floor(degree + 0.5) : 0;
 			if (degree > nr_cols)
@@ -291,6 +298,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		double b, s;
 		long retries;
 		long d1, d2;
+		double p_neigh = avg_num_neighbours / 2;   // Propability of having a right neighbour.
 
 		bound_l = 0;
 		bound_r = nr_cols;
@@ -382,6 +390,20 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 				}
 
 				values[j] = random_uniform(rs, 0, 1);
+
+				if (p_neigh > 0)    // Clustering.
+				{
+					while (j < j_e - 1)
+					{
+						if (random_uniform(rs, 0, 1) > p_neigh)
+							break;
+						k++;
+						if (k >= bound_r)
+							k = bound_l;
+						if (ordered_set_insert(OS, k))        // Don't retry if already filled, because searching for next empty spot can become O(n) hard.
+							j++;
+					}
+				}
 			}
 
 			ordered_set_sort(OS, &col_ind[j_s]);

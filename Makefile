@@ -9,7 +9,8 @@ CFLAGS += -Wall -Wextra
 CFLAGS += -fopenmp 
 
 # CFLAGS += -O0
-CFLAGS += -O2
+# CFLAGS += -O2
+CFLAGS += -O3 -flto
 
 
 SOFLAGS = -fPIC -shared

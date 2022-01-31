@@ -84,24 +84,26 @@ add_legend(struct Figure * fig, char * filename)
 	int label_l_y = space_v;
 	double text_ld = fig->y_min;
 	double text_lu = fig->y_max;
+	char * percentage_sign_y = fig->y_in_percentages ? "%" : "";
 	if (fig->axes_flip_y)
 	{
 		text_ld = fig->y_max;
 		text_lu = fig->y_min;
 	}
 	i += snprintf(cmd+i, cmd_n-i, " -gravity southeast");
-	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g'\"", label_l_x, label_l_y, text_ld);
+	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g%s'\"", label_l_x, label_l_y, text_ld, percentage_sign_y);
 	i += snprintf(cmd+i, cmd_n-i, " -gravity northeast");
-	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g'\"", label_l_x, label_l_y, text_lu);
+	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g%s'\"", label_l_x, label_l_y, text_lu, percentage_sign_y);
 
 	int label_dl_x = space_h;
 	int label_d_y = space_v - pointsize_small - text_spacer;
 	double text_dl = fig->x_min;
 	double text_dr = fig->x_max;
+	char * percentage_sign_x = fig->x_in_percentages ? "%" : "";
 	i += snprintf(cmd+i, cmd_n-i, " -gravity southwest");
-	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g'\"", label_dl_x, label_d_y, text_dl);
+	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g%s'\"", label_dl_x, label_d_y, text_dl, percentage_sign_x);
 	i += snprintf(cmd+i, cmd_n-i, " -gravity southeast");
-	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g'\"", text_spacer, label_d_y, text_dr);
+	i += snprintf(cmd+i, cmd_n-i, " -draw \"text %d,%d '%g%s'\"", text_spacer, label_d_y, text_dr, percentage_sign_x);
 
 	i += snprintf(cmd+i, cmd_n-i, " %s %s", filename, filename);
 

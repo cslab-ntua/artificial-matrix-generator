@@ -149,32 +149,62 @@ do {                                 \
 	(target > A[i]) ? 1 : (target < A[i]) ? -1 : 0;    \
 })
 
-#define _binary_search_base(_A, _index_lower_value, _index_higher_value, _target, _cmp_fun)                                        \
-({                                                                                                                                 \
-	RENAME((_A, A), (_index_lower_value, index_lower_value), (_index_higher_value, index_higher_value), (_target, target));    \
-	long s, e, m, ret;                                                                                                         \
-	s = (index_lower_value);                                                                                                   \
-	e = (index_higher_value);                                                                                                  \
-	while (1)                                                                                                                  \
-	{                                                                                                                          \
-		m = (s + e) / 2;                                                                                                   \
-		if (m == s || m == e)                                                                                              \
-			break;                                                                                                     \
-		if (_cmp_fun(target, A, m) > 0)                                                                                    \
-			s = m;                                                                                                     \
-		else                                                                                                               \
-			e = m;                                                                                                     \
-	}                                                                                                                          \
-	ret = (ABS(target - A[s]) < ABS(A[e] - target)) ? s : e;                                                                   \
-	ret;                                                                                                                       \
+#define _binary_search_default_dist(target, A, i)    \
+({                                                   \
+	(ABS(target - A[i]));                        \
+})
+
+#define _binary_search_base(_A, _index_lower_value, _index_higher_value, _target, _split_lower_ptr, _split_higher_ptr, _cmp_fun, _dist_fun)    \
+({                                                                                                                                             \
+	RENAME((_A, A), (_index_lower_value, index_lower_value), (_index_higher_value, index_higher_value), (_target, target),                 \
+			(_split_lower_ptr, split_lower_ptr), (_split_higher_ptr, split_higher_ptr));                                           \
+	long s, e, m, ret;                                                                                                                     \
+	__auto_type sl_ptr = _Generic((split_lower_ptr), void *: (long *) NULL, default: split_lower_ptr);                                     \
+	__auto_type sh_ptr = _Generic((split_higher_ptr), void *: (long *) NULL, default: split_higher_ptr);                                   \
+	s = (index_lower_value);                                                                                                               \
+	e = (index_higher_value);                                                                                                              \
+	if (_cmp_fun(target, A, s) <= 0)                                                                                                       \
+	{                                                                                                                                      \
+		ret = s;                                                                                                                       \
+		e = s;                                                                                                                         \
+		s = -1;                                                                                                                        \
+	}                                                                                                                                      \
+	else if (_cmp_fun(target, A, e) >= 0)                                                                                                  \
+	{                                                                                                                                      \
+		ret = e;                                                                                                                       \
+		s = e;                                                                                                                         \
+		e = -1;                                                                                                                        \
+	}                                                                                                                                      \
+	else                                                                                                                                   \
+	{                                                                                                                                      \
+		while (1)                                                                                                                      \
+		{                                                                                                                              \
+			m = (s + e) / 2;                                                                                                       \
+			if (m == s || m == e)                                                                                                  \
+				break;                                                                                                         \
+			if (_cmp_fun(target, A, m) > 0)                                                                                        \
+				s = m;                                                                                                         \
+			else                                                                                                                   \
+				e = m;                                                                                                         \
+		}                                                                                                                              \
+		ret = (_dist_fun(target, A, s) < _dist_fun(target, A, e)) ? s : e;                                                             \
+	}                                                                                                                                      \
+	if (sl_ptr != NULL)                                                                                                                    \
+		*sl_ptr = s;                                                                                                                   \
+	if (sh_ptr != NULL)                                                                                                                    \
+		*sh_ptr = e;                                                                                                                   \
+	ret;                                                                                                                                   \
 })
 
 
 // Index boundaries are inclusive.
 
-#define binary_search(A, index_lower_value, index_higher_value, target, ... /* compare_function */)                                         \
-({                                                                                                                                          \
-	_binary_search_base(A, index_lower_value, index_higher_value, target, DEFAULT_ARG_1(_binary_search_default_cmp, ##__VA_ARGS__));    \
+#define binary_search(A, index_lower_value, index_higher_value, target, split_lower_ptr, split_higher_ptr, ... /* compare_function, distance_function */)    \
+({                                                                                                                                                           \
+	_binary_search_base(A, index_lower_value, index_higher_value, target, split_lower_ptr, split_higher_ptr,                                             \
+			/* either given both, or use the default for both */                                                                                 \
+			DEFAULT_ARG_2(_binary_search_default_cmp, ##__VA_ARGS__),                                                                            \
+			DEFAULT_ARG_2(_binary_search_default_dist, ##__VA_ARGS__));                                                                          \
 })
 
 

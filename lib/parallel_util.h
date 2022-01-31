@@ -115,12 +115,12 @@ do {                                                                            
 	if (worker_pos == 0)                                                                                                                              \
 		_i_s = 0;                                                                                                                                 \
 	else                                                                                                                                              \
-		_i_s = binary_search(Sums, 0, N-1, _target);                                                                                              \
+		_i_s = binary_search(Sums, 0, N-1, _target, NULL, NULL);                                                                                  \
                                                                                                                                                           \
 	if (worker_pos == num_workers - 1)                                                                                                                \
 		_i_e = N;                                                                                                                                 \
 	else                                                                                                                                              \
-		_i_e = binary_search(Sums, 0, N-1, _target_next);                                                                                         \
+		_i_e = binary_search(Sums, 0, N-1, _target_next, NULL, NULL);                                                                             \
                                                                                                                                                           \
 	*local_start_ptr = _i_s;                                                                                                                          \
 	*local_end_ptr = _i_e;                                                                                                                            \
@@ -132,6 +132,11 @@ do {                                                                            
 #define _loop_partitioner_balance_cmp(target, A, i)                                                                                            \
 ({                                                                                                                                             \
 	(target > A[i] + _loop_partitioner_balance_i_vs_work * i) ? 1 : (target < A[i] + _loop_partitioner_balance_i_vs_work * i) ? -1 : 0;    \
+})
+
+#define _loop_partitioner_balance_dist(target, A, i)                     \
+({                                                                       \
+	ABS(target - A[i] - _loop_partitioner_balance_i_vs_work * i);    \
 })
 
 #define loop_partitioner_balance(num_workers, worker_pos, i_vs_work, Sums, N, total_sum, local_start_ptr, local_end_ptr, ... /* order_decreasing */)    \
@@ -147,12 +152,12 @@ do {                                                                            
 	if (worker_pos == 0)                                                                                                                            \
 		_i_s = 0;                                                                                                                               \
 	else                                                                                                                                            \
-		_i_s = binary_search(Sums, 0, N-1, _target, _loop_partitioner_balance_cmp);                                                             \
+		_i_s = binary_search(Sums, 0, N-1, _target, NULL, NULL, _loop_partitioner_balance_cmp);                                                 \
                                                                                                                                                         \
 	if (worker_pos == num_workers - 1)                                                                                                              \
 		_i_e = N;                                                                                                                               \
 	else                                                                                                                                            \
-		_i_e = binary_search(Sums, 0, N-1, _target_next, _loop_partitioner_balance_cmp);                                                        \
+		_i_e = binary_search(Sums, 0, N-1, _target_next, NULL, NULL, _loop_partitioner_balance_cmp);                                            \
                                                                                                                                                         \
 	*local_start_ptr = _i_s;                                                                                                                        \
 	*local_end_ptr = _i_e;                                                                                                                          \

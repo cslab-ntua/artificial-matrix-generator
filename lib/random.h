@@ -13,11 +13,19 @@
 
 
 /*
- * Note:
- *     The functions rand() and srand() conform to SVr4, 4.3BSD, C89, C99, POSIX.1-2001.  The function rand_r() is from POSIX.1-2001.
- *     POSIX.1-2008 marks rand_r() as obsolete.
- *     On older rand() implementations, and on current implementations on different systems, the lower-order bits are much less random than the higher-order bits.
- *     Do not use this function in applications intended to be portable when good randomness is needed.  (Use random(3) instead.)
+ * Notes:
+ *     - POSIX.1-2008 marks rand_r() as obsolete.
+ *       On older rand() implementations, and on current implementations on different systems, the lower-order bits are much less random than the higher-order bits.
+ *       Do not use this function in applications intended to be portable when good randomness is needed.  (Use random(3) instead.)
+ *
+ *     - float.h:
+ *       FLT_EPSILON
+ *           This is the difference between 1 and the smallest floating point number of type float that is greater than 1.
+ *           It’s supposed to be no greater than 1E-5.
+ *       DBL_EPSILON , LDBL_EPSILON
+ *           These are similar to FLT_EPSILON, but for the data types double and long double, respectively.
+ *           The type of the macro’s value is the same as the type it describes.
+ *           The values are not supposed to be greater than 1E-9.
  *
  * long random(void);
  * void srandom(unsigned seed);
@@ -186,7 +194,9 @@ random_uniform(struct Random_State * rs, double min, double max)
 }
 
 
-// Box-Muller transform (wikipedia)
+/*
+ * Box-Muller transform (wikipedia)
+ */
 static inline
 double
 random_normal(struct Random_State * rs, double mean, double std)
@@ -208,6 +218,50 @@ random_normal(struct Random_State * rs, double mean, double std)
 	// double z1  = mag * sin(two_pi * u2) + mean;
 
 	return z0;
+}
+
+
+/* 
+ * Marsaglia-Tsang fast gamma method
+ *
+ * Notes:
+ *     - k:shape , theta:scale
+ *     - k > 0 , theta > 0
+ *     - mean = k * theta    (> 0)
+ *     - var = theta^2 / k   (> 0)
+ *
+ *     - k = mean^2 / var  =  mean^2 / std^2
+ *       theta = var / mean    =  std^2 / mean
+ */
+static inline
+double
+random_gamma(struct Random_State * rs, double k, double theta)
+{
+	if (k < 1)
+	{
+		// double u = gsl_rng_uniform_pos(rs);
+		double u = random_uniform(rs, 2*DBL_EPSILON, 1);          // 2*DBL_EPSILON so that u > 0, and > DBL_EPSILON for better stability.
+		return random_gamma(rs, 1.0 + k, theta) * pow(u, 1.0 / k);
+	}
+	double x, v, u;
+	double d = k - 1.0 / 3.0;
+	double c = (1.0 / 3.0) / sqrt(d);
+	while (1)
+	{
+		do {
+			// x = gsl_ran_gaussian_ziggurat(rs, 1.0);
+			x = random_normal(rs, 0, 1);
+			v = 1.0 + c * x;
+		} while (v <= 0);
+		v = v * v * v;
+		// u = gsl_rng_uniform_pos(rs);
+		u = random_uniform(rs, 2*DBL_EPSILON, 1);
+		if (u < 1 - 0.0331 * x * x * x * x) 
+			break;
+		if (log(u) < 0.5 * x * x + d * (1 - v + log(v)))
+			break;
+	}
+	return theta * d * v;
 }
 
 
