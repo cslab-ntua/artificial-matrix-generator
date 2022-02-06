@@ -41,11 +41,14 @@ struct csr_matrix {
 	double std_sc;
 	double avg_sc_scaled;
 	double std_sc_scaled;
+
+	double avg_num_neighbours;
+	double cross_row_similarity;
 };
 
 
 int free_csr_matrix(struct csr_matrix * csr);
-struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew, double avg_num_neighbours);
+struct csr_matrix * artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew, double avg_num_neighbours, double cross_row_similarity);
 void csr_matrix_print(struct csr_matrix * csr);
 void csr_matrix_write_mtx(struct csr_matrix * csr, char * file_out);
 

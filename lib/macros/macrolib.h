@@ -72,10 +72,11 @@
 #include "call_for_each_arg.h"
 
 
-// Rename macro arguments to avoid namewith macro variables.
+// Rename macro arguments to avoid names clashing with macro variables.
+// Optionally pass type.
 #define __RENAME_PREFIX __eb320f0c2b6a25b48ca861a120eea902__     // MD5 of "macro" (no reason)
-#define RENAME_1(a, b)  __auto_type __MACRO_EXCLUSIVE_PREFIX##b = (a);
-#define RENAME_2(a, b)  __auto_type b = __MACRO_EXCLUSIVE_PREFIX##b;
+#define RENAME_1(a, b, ...)  DEFAULT_ARG_1(__auto_type, ##__VA_ARGS__) __MACRO_EXCLUSIVE_PREFIX##b = (a);
+#define RENAME_2(a, b, ...)  DEFAULT_ARG_1(__auto_type, ##__VA_ARGS__) b = __MACRO_EXCLUSIVE_PREFIX##b;
 
 #define RENAME(...)                                             \
 	FOREACH_UNGUARDED(RENAME_1, ##__VA_ARGS__);             \
@@ -157,10 +158,8 @@ do {                                 \
 #define _binary_search_base(_A, _index_lower_value, _index_higher_value, _target, _split_lower_ptr, _split_higher_ptr, _cmp_fun, _dist_fun)    \
 ({                                                                                                                                             \
 	RENAME((_A, A), (_index_lower_value, index_lower_value), (_index_higher_value, index_higher_value), (_target, target),                 \
-			(_split_lower_ptr, split_lower_ptr), (_split_higher_ptr, split_higher_ptr));                                           \
+			(_split_lower_ptr, split_lower_ptr, long *), (_split_higher_ptr, split_higher_ptr, long *));                           \
 	long s, e, m, ret;                                                                                                                     \
-	__auto_type sl_ptr = _Generic((split_lower_ptr), void *: (long *) NULL, default: split_lower_ptr);                                     \
-	__auto_type sh_ptr = _Generic((split_higher_ptr), void *: (long *) NULL, default: split_higher_ptr);                                   \
 	s = (index_lower_value);                                                                                                               \
 	e = (index_higher_value);                                                                                                              \
 	if (_cmp_fun(target, A, s) <= 0)                                                                                                       \
@@ -189,10 +188,10 @@ do {                                 \
 		}                                                                                                                              \
 		ret = (_dist_fun(target, A, s) < _dist_fun(target, A, e)) ? s : e;                                                             \
 	}                                                                                                                                      \
-	if (sl_ptr != NULL)                                                                                                                    \
-		*sl_ptr = s;                                                                                                                   \
-	if (sh_ptr != NULL)                                                                                                                    \
-		*sh_ptr = e;                                                                                                                   \
+	if (split_lower_ptr != NULL)                                                                                                           \
+		*split_lower_ptr = s;                                                                                                          \
+	if (split_higher_ptr != NULL)                                                                                                          \
+		*split_higher_ptr = e;                                                                                                         \
 	ret;                                                                                                                                   \
 })
 

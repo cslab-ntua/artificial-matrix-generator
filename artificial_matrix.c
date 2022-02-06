@@ -7,43 +7,37 @@
 #include "matrix_util.h"
 
 
+#include "debug.h"
 #include "time_it.h"
 #include "plot/plot.h"
 
-double
-get_row(void * A, int pos)
-{
-	struct csr_matrix * csr = A;
-	long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos, NULL, NULL);
-	if (csr->row_ptr[i] > pos)
-		i--;
-	return (double) i;
-}
-
-
-double
-get_col(void * A, int pos)
-{
-	struct csr_matrix * csr = A;
-	return (double) csr->col_ind[pos];
-}
-
-
-double
-get_degree(void * A, int i)
-{
-	struct csr_matrix * csr = A;
-	return (double) csr->row_ptr[i+1] -  csr->row_ptr[i];
-}
-
 
 void
-plot_csr(struct csr_matrix * csr, char * matrix_name, double * neigh_distances_freq_perc)
+plot_csr(struct csr_matrix * csr, char * matrix_name)
 {
 	long num_pixels = 1024;
 	long num_pixels_x = num_pixels, num_pixels_y = num_pixels;
 	long buf_n = strlen(matrix_name) + 1 + 1000;
 	char buf[buf_n], buf_title[buf_n];
+
+	double get_row(void * A, int pos)
+	{
+		struct csr_matrix * csr = A;
+		long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos, NULL, NULL);
+		if (csr->row_ptr[i] > pos)
+			i--;
+		return (double) i;
+	}
+	double get_col(void * A, int pos)
+	{
+		struct csr_matrix * csr = A;
+		return (double) csr->col_ind[pos];
+	}
+	double get_degree(void * A, int i)
+	{
+		struct csr_matrix * csr = A;
+		return (double) csr->row_ptr[i+1] -  csr->row_ptr[i];
+	}
 
 	snprintf(buf, buf_n, "figures/%s-artificial.png", matrix_name);
 	snprintf(buf_title, buf_n, "%s-artificial", matrix_name);
@@ -56,99 +50,48 @@ plot_csr(struct csr_matrix * csr, char * matrix_name, double * neigh_distances_f
 	);
 
 	// Plot degree histogram.
-	long num_bins = 10000;
-	snprintf(buf, buf_n, "figures/%s-artificial_degree_distribution.png", matrix_name);
-	snprintf(buf_title, buf_n, "%s-artificial: degree distribution (percentages)", matrix_name);
-	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
-		figure_enable_legend(_fig);
-		figure_set_title(_fig, buf_title);
-		figure_series_type_histogram(_s, num_bins, 1);
-		figure_series_type_barplot(_s);
-	);
+	#if 1
+		long num_bins = 10000;
+		snprintf(buf, buf_n, "figures/%s-artificial_degree_distribution.png", matrix_name);
+		snprintf(buf_title, buf_n, "%s-artificial: degree distribution (percentages)", matrix_name);
+		figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, csr, NULL, csr->nr_rows, 0, NULL, get_degree),
+			figure_enable_legend(_fig);
+			figure_set_title(_fig, buf_title);
+			figure_series_type_histogram(_s, num_bins, 1);
+			figure_series_type_barplot(_s);
+		);
+	#endif
 
 	// Plot neighbour distances frequencies.
-	snprintf(buf_title, buf_n, "%s-artificial: neighbour distances frequencies (percentages)", matrix_name);
-	long pos;
-	for (pos=csr->nr_cols-1;pos>0;pos--)
-		if (neigh_distances_freq_perc[pos] != 0)
-			break;
-	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq.png", matrix_name);
-	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
-		figure_enable_legend(_fig);
-		figure_set_title(_fig, buf_title);
-		figure_series_type_barplot(_s);
-	);
-	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_100.png", matrix_name);
-	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
-		figure_enable_legend(_fig);
-		figure_set_title(_fig, buf_title);
-		figure_series_type_barplot(_s);
-		figure_set_bounds_x(_fig, 0, 100);
-	);
-	snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_1000.png", matrix_name);
-	figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
-		figure_enable_legend(_fig);
-		figure_set_title(_fig, buf_title);
-		figure_series_type_barplot(_s);
-		figure_set_bounds_x(_fig, 0, 1000);
-	);
-}
-
-
-double *
-csr_row_neighbours(struct csr_matrix * csr, long window_size)
-{
-	double * neigh_num = malloc(csr->nr_nzeros * sizeof(*neigh_num));
-	#pragma omp parallel
-	{
-		long i, j, k;
-		#pragma omp for schedule(static)
-		for (i=0;i<csr->nr_nzeros;i++)
-			neigh_num[i] = 0;
-		#pragma omp for schedule(static)
-		for (i=0;i<csr->nr_rows;i++)
-		{
-			for (j=csr->row_ptr[i];j<csr->row_ptr[i+1];j++)
-			{
-				for (k=j+1;k<csr->row_ptr[i+1];k++)
-				{
-					if (csr->col_ind[k] - csr->col_ind[j] > window_size)
-						break;
-					neigh_num[j]++;
-					neigh_num[k]++;
-				}
-			}
-		}
-	}
-	return neigh_num;
-}
-
-
-double *
-csr_neighbours_distances_frequencies(struct csr_matrix * csr)
-{
-	long * frequencies = malloc(csr->nr_cols * sizeof(*frequencies));
-	double * frequencies_percentage = malloc(csr->nr_cols * sizeof(*frequencies_percentage));
-	#pragma omp parallel
-	{
-		long i, j;
-		#pragma omp for schedule(static)
-		for (i=0;i<csr->nr_cols;i++)
-			frequencies[i] = 0;
-		#pragma omp for schedule(static)
-		for (i=0;i<csr->nr_rows;i++)
-		{
-			for (j=csr->row_ptr[i];j<csr->row_ptr[i+1]-1;j++)
-			{
-				__atomic_fetch_add(&frequencies[csr->col_ind[j+1] - csr->col_ind[j]], 1, __ATOMIC_RELAXED);
-			}
-		}
-		#pragma omp for schedule(static)
-		for (i=0;i<csr->nr_cols;i++)
-			frequencies_percentage[i] = ((double) 100 * frequencies[i]) / csr->nr_nzeros;
-	}
-	free(frequencies);
-	return frequencies_percentage;
+	#if 0
+		double * neigh_distances_freq_perc = csr_neighbours_distances_frequencies(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros);
+		snprintf(buf_title, buf_n, "%s-artificial: neighbour distances frequencies (percentages)", matrix_name);
+		long pos;
+		for (pos=csr->nr_cols-1;pos>0;pos--)
+			if (neigh_distances_freq_perc[pos] != 0)
+				break;
+		snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq.png", matrix_name);
+		figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+			figure_enable_legend(_fig);
+			figure_set_title(_fig, buf_title);
+			figure_series_type_barplot(_s);
+		);
+		snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_100.png", matrix_name);
+		figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+			figure_enable_legend(_fig);
+			figure_set_title(_fig, buf_title);
+			figure_series_type_barplot(_s);
+			figure_set_bounds_x(_fig, 0, 100);
+		);
+		snprintf(buf, buf_n, "figures/%s-artificial_neigh_dist_freq_x_1000.png", matrix_name);
+		figure_simple_plot(buf, num_pixels_x, num_pixels_y, (NULL, neigh_distances_freq_perc, NULL, pos+1, 0),
+			figure_enable_legend(_fig);
+			figure_set_title(_fig, buf_title);
+			figure_series_type_barplot(_s);
+			figure_set_bounds_x(_fig, 0, 1000);
+		);
+		free(neigh_distances_freq_perc);
+	#endif
 }
 
 
@@ -165,14 +108,12 @@ main(int argc, char **argv)
 	double bw;
 	double skew;
 	double avg_num_neighbours;
+	double cross_row_similarity;
 	char * matrix_name = "";
 	long i;
 
 	if (argc < 6)
-	{
-		printf("wrong number of parameters\n");
-		exit(1);
-	}
+		error("wrong number of parameters\n");
 
 	i = 1;
 	nr_rows = atoi(argv[i++]);
@@ -184,6 +125,7 @@ main(int argc, char **argv)
 	bw = atof(argv[i++]);
 	skew = atof(argv[i++]);
 	avg_num_neighbours = atof(argv[i++]);
+	cross_row_similarity = atof(argv[i++]);
 	seed = atoi(argv[i++]);
 	if (argc >= i)
 	{
@@ -196,7 +138,7 @@ main(int argc, char **argv)
 
 	double time;
 	time = time_it(1,
-		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew, avg_num_neighbours);
+		csr = artificial_matrix_generation(nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw, skew, avg_num_neighbours, cross_row_similarity);
 	);
 	printf("time generate matrix = %g\n", time);
 
@@ -205,12 +147,13 @@ main(int argc, char **argv)
 	// window_size = 8;
 	// window_size = 4;
 	window_size = 1;
-	double * neigh_num = csr_row_neighbours(csr, window_size);
-	double mean_neigh = matrix_mean(neigh_num, csr->nr_nzeros);
-	double std_neigh = matrix_std_base(neigh_num, csr->nr_nzeros, mean_neigh);
+	double avg_num_neigh = csr_avg_row_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
 
-	// double * neigh_distances_freq_perc = csr_neighbours_distances_frequencies(csr);
-	// plot_csr(csr, matrix_name, neigh_distances_freq_perc);
+	double true_cross_row_similarity = csr_cross_row_similarity(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
+
+	long num_clusters = csr_clusters_number(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 0);
+
+	// plot_csr(csr, matrix_name);
 
 	printf("%s, ", matrix_name);
 	printf("distribution=%s, ", csr->distribution);
@@ -235,15 +178,20 @@ main(int argc, char **argv)
 	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
-	printf("mean neigh num = %g, ", mean_neigh);
-	printf("std neigh num = %g, ", std_neigh);
+	printf("avg_num_neigh=%g, ", avg_num_neigh);
+	printf("cross_row_similarity=%g, ", true_cross_row_similarity);
+	printf("num_clusters=%ld, ", num_clusters);
+	printf("avg_cluster_size=%g, ", ((double) csr->nr_nzeros) / num_clusters);
 	printf("\n");
 
 	// fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew);
-	// fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew);
+	fprintf(stderr, "%s\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%lf\t%lf\n", matrix_name, csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, avg_num_neigh, true_cross_row_similarity);
 
-	// fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, mean_neigh, std_neigh);
-	fprintf(stderr, "%lf\t%lf\n", mean_neigh, std_neigh);
+	// fprintf(stderr, "%lf\t%lf\n", avg_num_neigh, std_neigh);
+	// fprintf(stderr, "%lf\n", true_cross_row_similarity);
+	// fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, avg_num_neigh/avg_num_neighbours, true_cross_row_similarity / cross_row_similarity);
+	// fprintf(stderr, "%lf\t%lf\n", avg_num_neigh, true_cross_row_similarity);
+	// fprintf(stderr, "%s\t%lf\t%ld\t%lf\t%lf\n", matrix_name, avg_num_neighbours, num_clusters, 1 / (1 - avg_num_neighbours/2), ((double) csr->nr_nzeros) / num_clusters);
  
 	// csr_matrix_write_mtx(csr, "out.mtx");
 

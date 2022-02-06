@@ -66,12 +66,12 @@ do {                                                                            
 	if (_order_decreasing)                                                                                                                                    \
 	{                                                                                                                                                         \
 		__target = (total_sum * (_num_threads - 1 - _tnum)) / _num_threads;                                                                               \
-		_i_s = binary_search(Sums, N-1, 0, __target);                                                                                                     \
+		_i_s = binary_search(Sums, N-1, 0, __target, NULL, NULL);                                                                                         \
 	}                                                                                                                                                         \
 	else                                                                                                                                                      \
 	{                                                                                                                                                         \
 		__target = (total_sum * _tnum) / _num_threads;                                                                                                    \
-		_i_s = binary_search(Sums, 0, N-1, __target);                                                                                                     \
+		_i_s = binary_search(Sums, 0, N-1, __target, NULL, NULL);                                                                                         \
 	}                                                                                                                                                         \
                                                                                                                                                                   \
 	/* if (_i_s < _tnum)                                                                                                                                      \
@@ -152,12 +152,12 @@ do {                                                                            
 	if (worker_pos == 0)                                                                                                                            \
 		_i_s = 0;                                                                                                                               \
 	else                                                                                                                                            \
-		_i_s = binary_search(Sums, 0, N-1, _target, NULL, NULL, _loop_partitioner_balance_cmp);                                                 \
+		_i_s = binary_search(Sums, 0, N-1, _target, NULL, NULL, _loop_partitioner_balance_cmp, _loop_partitioner_balance_dist);                 \
                                                                                                                                                         \
 	if (worker_pos == num_workers - 1)                                                                                                              \
 		_i_e = N;                                                                                                                               \
 	else                                                                                                                                            \
-		_i_e = binary_search(Sums, 0, N-1, _target_next, NULL, NULL, _loop_partitioner_balance_cmp);                                            \
+		_i_e = binary_search(Sums, 0, N-1, _target_next, NULL, NULL, _loop_partitioner_balance_cmp, _loop_partitioner_balance_dist);            \
                                                                                                                                                         \
 	*local_start_ptr = _i_s;                                                                                                                        \
 	*local_end_ptr = _i_e;                                                                                                                          \

@@ -68,6 +68,7 @@ vector_destroy(struct Vector * v)
 
 #undef vector_resize
 #define vector_resize  VECTOR_GEN_EXPAND(vector_resize)
+inline
 void
 vector_resize(struct Vector * v, long new_capacity)
 {
@@ -86,8 +87,9 @@ vector_resize(struct Vector * v, long new_capacity)
 
 #undef vector_push_back
 #define vector_push_back  VECTOR_GEN_EXPAND(vector_push_back)
+inline
 void
-vector_push_back(struct Vector * v, _TYPE elem)
+vector_push_back(struct Vector * restrict v, _TYPE elem)
 {
 	if (v->size + 1 <= v->max_size)
 	{
@@ -103,26 +105,21 @@ vector_push_back(struct Vector * v, _TYPE elem)
 
 #undef vector_push_back_array
 #define vector_push_back_array  VECTOR_GEN_EXPAND(vector_push_back_array)
+inline
 void
-vector_push_back_array(struct Vector * v, _TYPE * elem, long n)
+vector_push_back_array(struct Vector * restrict v, _TYPE * restrict array, long n)
 {
 	long i;
-	if (v->size + n <= v->max_size)
-	{
-		for (i=0;i<n;i++)
-			v->data[v->size + i] = elem[i];
-		v->size += n;
-	}
-	else
+	if (v->size + n > v->max_size)
 	{
 		long new_capacity = 2 * v->capacity;
 		long bytes = (v->size + n) * sizeof(*(v->data));
 		while (bytes > new_capacity)
 			new_capacity *= 2;
 		vector_resize(v, new_capacity);
-		for (i=0;i<n;i++)
-			v->data[v->size + i] = elem[i];
-		v->size += n;
 	}
+	for (i=0;i<n;i++)
+		v->data[v->size + i] = array[i];
+	v->size += n;
 }
 

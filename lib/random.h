@@ -201,22 +201,14 @@ static inline
 double
 random_normal(struct Random_State * rs, double mean, double std)
 {
-	const double two_pi = 2.0 * M_PI;
 	double u1, u2;
-
 	// Create two uniform random numbers, make sure u1 is greater than epsilon.
-	do
-	{
-		u1 = random_uniform(rs, 0, 1);
-		u2 = random_uniform(rs, 0, 1);
-	}
-	while (u1 <= DBL_EPSILON);
-
+	u1 = random_uniform(rs, 2*DBL_EPSILON, 1);
+	u2 = random_uniform(rs, 0, 1);
 	// Compute z0 and z1.
-	double mag = std * sqrt(-2.0 * log(u1));
-	double z0  = mag * cos(two_pi * u2) + mean;
-	// double z1  = mag * sin(two_pi * u2) + mean;
-
+	double magnitude = std * sqrt(-2.0 * log(u1));
+	double z0  = magnitude * cos(2.0 * M_PI * u2) + mean;
+	// double z1  = magnitude * sin(2.0 * M_PI * u2) + mean;
 	return z0;
 }
 
@@ -230,8 +222,8 @@ random_normal(struct Random_State * rs, double mean, double std)
  *     - mean = k * theta    (> 0)
  *     - var = theta^2 / k   (> 0)
  *
- *     - k = mean^2 / var  =  mean^2 / std^2
- *       theta = var / mean    =  std^2 / mean
+ *     - k = mean^2 / var =  mean^2 / std^2
+ *       theta = var / mean =  std^2 / mean
  */
 static inline
 double
