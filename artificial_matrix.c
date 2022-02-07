@@ -142,14 +142,14 @@ main(int argc, char **argv)
 	);
 	printf("time generate matrix = %g\n", time);
 
-	long window_size;  // Distance from left and right.
+	// long window_size;  // Distance from left and right.
 	// window_size = 64 / sizeof(double) / 2;
 	// window_size = 8;
 	// window_size = 4;
-	window_size = 1;
-	double avg_num_neigh = csr_avg_row_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
+	// window_size = 1;
+	// double avg_num_neigh = csr_avg_row_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
 
-	double true_cross_row_similarity = csr_cross_row_similarity(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
+	// double true_cross_row_similarity = csr_cross_row_similarity(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, window_size);
 
 	long num_clusters = csr_clusters_number(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 0);
 
@@ -178,19 +178,22 @@ main(int argc, char **argv)
 	printf("min_nnz_per_row=%g, ", csr->min_nnz_per_row);
 	printf("max_nnz_per_row=%g, ", csr->max_nnz_per_row);
 	printf("skew=%g, ", csr->skew);
-	printf("avg_num_neigh=%g, ", avg_num_neigh);
-	printf("cross_row_similarity=%g, ", true_cross_row_similarity);
+	printf("avg_num_neighbours=%g, ", csr->avg_num_neighbours);
+	printf("cross_row_similarity=%g, ", csr->cross_row_similarity);
 	printf("num_clusters=%ld, ", num_clusters);
 	printf("avg_cluster_size=%g, ", ((double) csr->nr_nzeros) / num_clusters);
 	printf("\n");
 
 	// fprintf(stderr, "%s\t%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\n", matrix_name, nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew);
-	fprintf(stderr, "%s\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%lf\t%lf\n", matrix_name, csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, avg_num_neigh, true_cross_row_similarity);
+	// fprintf(stderr, "%s\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%lf\t%lf\n", matrix_name, csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, csr->avg_num_neighbours, csr->cross_row_similarity);
 
-	// fprintf(stderr, "%lf\t%lf\n", avg_num_neigh, std_neigh);
-	// fprintf(stderr, "%lf\n", true_cross_row_similarity);
-	// fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, avg_num_neigh/avg_num_neighbours, true_cross_row_similarity / cross_row_similarity);
-	// fprintf(stderr, "%lf\t%lf\n", avg_num_neigh, true_cross_row_similarity);
+	fprintf(stderr, "%ld\t%ld\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%lf\t%lf", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, placement, bw, skew, avg_num_neighbours, cross_row_similarity);
+	fprintf(stderr, "\t%d\t%d\t%lf\t%lf\t%s\t%s\t%lf\t%lf\t%lf\t%lf\n", csr->nr_rows, csr->nr_cols, csr->avg_nnz_per_row, csr->std_nnz_per_row, csr->distribution, csr->placement, csr->avg_bw_scaled, csr->skew, csr->avg_num_neighbours, csr->cross_row_similarity);
+
+	// fprintf(stderr, "%lf\t%lf\n", csr->avg_num_neighbours, std_neigh);
+	// fprintf(stderr, "%lf\n", csr->cross_row_similarity);
+	// fprintf(stderr, "%s\t%lf\t%lf\n", matrix_name, csr->avg_num_neighbours/avg_num_neighbours, csr->cross_row_similarity / cross_row_similarity);
+	// fprintf(stderr, "%lf\t%lf\n", csr->avg_num_neighbours, csr->cross_row_similarity);
 	// fprintf(stderr, "%s\t%lf\t%ld\t%lf\t%lf\n", matrix_name, avg_num_neighbours, num_clusters, 1 / (1 - avg_num_neighbours/2), ((double) csr->nr_nzeros) / num_clusters);
  
 	// csr_matrix_write_mtx(csr, "out.mtx");

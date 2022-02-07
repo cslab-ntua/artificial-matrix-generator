@@ -217,8 +217,9 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 		avg_distr = avg_nnz_per_row - MAX / C;
 		std_distr = sqrt(std_nnz_per_row*std_nnz_per_row - std_exp*std_exp);
 
-		if (std_distr > avg_distr / 3)       // For normal distribution, in order to have very few negative random numbers.
-			std_distr = avg_distr / 3;
+		if (*distribution == 'n')
+			if (std_distr > avg_distr / 3)       // For normal distribution, in order to have very few negative random numbers.
+				std_distr = avg_distr / 3;
 	}
 
 	debug("C = %g\n", C);
@@ -276,11 +277,15 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 			if (std_distr > 0)
 			{
-				degree_distr = random_normal(rs, avg_distr, std_distr);
-				// double k, theta;
-				// k = (avg_distr*avg_distr) / (std_distr*std_distr);
-				// theta = (avg_distr > 0) ? (std_distr*std_distr) / avg_distr : 1;
-				// degree_distr = random_gamma(rs, k, theta);
+				double k, theta;
+				if (*distribution == 'n')
+					degree_distr = random_normal(rs, avg_distr, std_distr);
+				else
+				{
+					k = (avg_distr*avg_distr) / (std_distr*std_distr);
+					theta = (avg_distr > 0) ? (std_distr*std_distr) / avg_distr : 1;
+					degree_distr = random_gamma(rs, k, theta);
+				}
 			}
 			else
 				degree_distr = avg_distr;
