@@ -10,10 +10,10 @@
 #include "artificial_matrix_generation.h"
 
 
-#define error(fmt, ...)                       \
-do {                                          \
-	fprintf(stderr, fmt, __VA_ARGS__);    \
-	exit(1);                              \
+#define error(fmt, ...)                         \
+do {                                            \
+	fprintf(stderr, fmt, ##__VA_ARGS__);    \
+	exit(1);                                \
 } while (0)
 
 
@@ -39,6 +39,17 @@ free_csr_matrix(struct csr_matrix * csr)
 	free(csr->row_ptr);
 	free(csr);
 	return 0;
+}
+
+
+void *
+safe_aligned_alloc(size_t alignment, size_t size)
+{
+	size_t size_divisible = alignment * ((size + alignment - 1) / alignment);
+	void * ret = aligned_alloc(alignment, size_divisible);
+	if (ret == NULL)
+		error("aligned_alloc");
+	return ret;
 }
 
 
@@ -152,6 +163,7 @@ calculate_new_bw(double B, double n)
 struct csr_matrix *
 artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew, double avg_num_neighbours, double cross_row_similarity)
 {
+	__label__ label_placement_out;
 	int num_threads = omp_get_max_threads();
 	int * offsets;
 	int * col_ind;
@@ -179,8 +191,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 	debug("arguments: %ld %ld %g %g %s %u %s %g %g %g %g\n", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw_scaled, skew, avg_num_neighbours, cross_row_similarity);
 
-	offsets = (typeof(offsets)) malloc((nr_rows+1) * sizeof(*offsets));
-	csr = (typeof(csr)) malloc(sizeof(*csr));
+	offsets = (typeof(offsets)) safe_aligned_alloc(64, (nr_rows+1) * sizeof(*offsets));
+	csr = (typeof(csr)) safe_aligned_alloc(64, sizeof(*csr));
 	csr->nr_rows = nr_rows;
 	csr->nr_cols = nr_cols;
 	csr->seed = seed;
@@ -189,9 +201,9 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	if (bw_scaled > 1)                    // bandwidth <= number of columns
 		bw_scaled = 1;
 
-	degrees = (typeof(degrees)) malloc(nr_rows * sizeof(*degrees));
-	bandwidths = (typeof(bandwidths)) malloc(nr_rows * sizeof(*bandwidths));
-	scatters = (typeof(scatters)) malloc(nr_rows * sizeof(*scatters));
+	degrees = (typeof(degrees)) safe_aligned_alloc(64, nr_rows * sizeof(*degrees));
+	bandwidths = (typeof(bandwidths)) safe_aligned_alloc(64, nr_rows * sizeof(*bandwidths));
+	scatters = (typeof(scatters)) safe_aligned_alloc(64, nr_rows * sizeof(*scatters));
 
 
 	// Calculate parameters from the addition of the exponential.
@@ -319,8 +331,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			}
 			nnz = total_sum;
 			offsets[nr_rows] = nnz;
-			col_ind = (typeof(col_ind)) malloc(nnz * sizeof(*col_ind));
-			values = (typeof(values)) malloc(nnz * sizeof(*values));
+			col_ind = (typeof(col_ind)) safe_aligned_alloc(64, nnz * sizeof(*col_ind));
+			values = (typeof(values)) safe_aligned_alloc(64, nnz * sizeof(*values));
 
 			csr->nr_nzeros = nnz;
 			csr->row_ptr = offsets;
@@ -367,12 +379,21 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 				range = degree;
 			half_range = range / 2;
 
-			if (*placement == 'd')
+			if (*placement == 's') // simple (all nnz together at the beginning of the row)
+			{
+				for (j=j_s;j<j_e;j++)
+				{
+					col_ind[j] = j - j_s;
+					values[j] = random_uniform(rs, 0, 1);
+				}
+				goto label_placement_out;
+			}
+			else if (*placement == 'd') // diagonal
 			{
 				bound_relaxed_l = i - half_range;
 				bound_relaxed_r = i + half_range + range % 2;      // Correct modulo upwards.
 			}
-			else
+			else // random
 			{
 				bound_relaxed_l = nr_cols/2 - half_range;
 				bound_relaxed_r = nr_cols/2 + half_range + range % 2;
@@ -472,6 +493,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 			ordered_set_sort(OS, &col_ind[j_s]);
 
+		label_placement_out:
+
 			b = col_ind[j_e-1] - col_ind[j_s] + 1;
 			bandwidths[i] = b;
 
@@ -549,7 +572,7 @@ csr_matrix_write_mtx(struct csr_matrix * csr, char * file_out)
 		j_s = csr->row_ptr[i];
 		j_e = csr->row_ptr[i+1];
 		for (j=j_s;j<j_e;j++)
-			fprintf(file, "%ld %ld %g\n", i, j, csr->values[j]);
+			fprintf(file, "%ld %d %g\n", i+1, csr->col_ind[j]+1, csr->values[j]);
 	}
 }
 

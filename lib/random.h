@@ -231,7 +231,6 @@ random_gamma(struct Random_State * rs, double k, double theta)
 {
 	if (k < 1)
 	{
-		// double u = gsl_rng_uniform_pos(rs);
 		double u = random_uniform(rs, 2*DBL_EPSILON, 1);          // 2*DBL_EPSILON so that u > 0, and > DBL_EPSILON for better stability.
 		return random_gamma(rs, 1.0 + k, theta) * pow(u, 1.0 / k);
 	}
@@ -246,7 +245,6 @@ random_gamma(struct Random_State * rs, double k, double theta)
 			v = 1.0 + c * x;
 		} while (v <= 0);
 		v = v * v * v;
-		// u = gsl_rng_uniform_pos(rs);
 		u = random_uniform(rs, 2*DBL_EPSILON, 1);
 		if (u < 1 - 0.0331 * x * x * x * x) 
 			break;

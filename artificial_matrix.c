@@ -127,13 +127,11 @@ main(int argc, char **argv)
 	avg_num_neighbours = atof(argv[i++]);
 	cross_row_similarity = atof(argv[i++]);
 	seed = atoi(argv[i++]);
-	if (argc >= i)
-	{
+	if (argc > i)
 		matrix_name = argv[i++];
-		printf("matrix: %s\n", matrix_name);
-	}
 	else
-		matrix_name = "csr";
+		matrix_name = "unnamed";
+	printf("matrix: %s\n", matrix_name);
 
 
 	double time;
@@ -153,7 +151,10 @@ main(int argc, char **argv)
 
 	long num_clusters = csr_clusters_number(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 0);
 
-	// plot_csr(csr, matrix_name);
+	plot_csr(csr, matrix_name);
+
+	// csr_matrix_print(csr);
+	// csr_matrix_write_mtx(csr, "test.mtx");
 
 	printf("%s, ", matrix_name);
 	printf("distribution=%s, ", csr->distribution);

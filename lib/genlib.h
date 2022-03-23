@@ -2,6 +2,7 @@
 #define GENLIB_H
 
 #include <assert.h>
+#include <complex.h>
 #include <tgmath.h>
 #include "macros/macrolib.h"
 #include "debug.h"

@@ -168,7 +168,7 @@ read_until_EOF(int fd, char **ret)
 	size_t len = 1;
 	char * buf, * tmp;
 
-	buf = malloc(len);
+	buf = (typeof(buf)) malloc(len);
 	while (1)
 	{
 		do {
@@ -184,7 +184,7 @@ read_until_EOF(int fd, char **ret)
 		} while (total < len);
 		len *= 2;
 		tmp = buf;
-		buf = malloc(len);
+		buf = (typeof(buf)) malloc(len);
 		memcpy(buf, tmp, total);
 		free(tmp);
 	}

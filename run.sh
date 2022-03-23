@@ -50,18 +50,63 @@ params=(
     # "986703 986703 72.63211422 15.81042955 ${distribution} random 0.01817301802 0.1152091726 1.769845 0.915136 14 bone010"
     # "5154859 5154859 19.24389222 5.736719369 ${distribution} random 0.2119567644 1.442333363 0.197548 0.794106 14 cage15"
 
-    "986703 986703 72.63211422 0 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 1 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 2 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 4 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 8 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 16 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 32 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
-    "986703 986703 72.63211422 64 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 0 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 1 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 2 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 4 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 8 ${distribution} random 0.0922  3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 16 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 32 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
+    # "986703 986703 72.63211422 64 ${distribution} random 0.0922 3 1.5577 0.6427 14 synthetic"
+
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.05 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.05 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.05 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.5 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.5 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.5 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.95 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.95 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 0 0.95 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.05 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.05 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.05 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.5 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.5 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.5 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.95 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.95 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 100 0.95 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.05 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.05 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.05 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.5 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.5 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.5 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.95 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.95 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 1000 0.95 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.05 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.05 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.05 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.5 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.5 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.5 0.95 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.95 0.05 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.95 0.5 14 synthetic"
+    # "819190 819190 50 1.6667 ${distribution} random 0.05 10000 0.95 0.95 14 synthetic"
 
     # "38120 38120 424.2174449 484.237499 ${distribution} random 0.4832654419 1.317207865 1.979904 14 TSOPF_RS_b2383"
     # "38120 38120 424.2174449 484.237499 ${distribution} random 0.4832654419 1.317207865 1 14 TSOPF_RS_b2383"
     # "38120 38120 424.2174449 484.237499 ${distribution} random 0.4832654419 1.317207865 0 14 TSOPF_RS_b2383"
+
+    # '28508159 28508159 5 1.6667 normal random 0.05 0 0.05 0.5 14'
+
+    '303884 303884 500 166.6667 normal random 0.05 1000 0.05 0.05 14'
+
+    # '303884 303884 500 166.6667 normal simple 0.05 1000 0.05 0.05 14'
+
+    # '256 1 1 0 normal random 0.5 0 0 0 14 test'
 
 )
 
