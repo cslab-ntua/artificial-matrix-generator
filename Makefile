@@ -30,16 +30,16 @@ LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.
 CFLAGS += -I$(library) -D'PLOT'
 
 
-all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o artificial_matrix_generation_double.so artificial_matrix_generation_float.so
+all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o libartificial_matrix_generation_double.so libartificial_matrix_generation_float.so
 
 
 artificial_matrix.exe: artificial_matrix.c artificial_matrix_generation.c ordered_set.c $(LIBSRC)
 	$(CC) $(CFLAGS) -D'VERBOSE' $^ -o $@ $(LDFLAGS)
 
 
-artificial_matrix_generation_double.so: artificial_matrix_generation.c ordered_set.o
+libartificial_matrix_generation_double.so: artificial_matrix_generation.c ordered_set.o
 	$(CC) $(CFLAGS) -D'ValueType=double' $(SOFLAGS) $^ -o $@ $(LDFLAGS)
-artificial_matrix_generation_float.so: artificial_matrix_generation.c ordered_set.o
+libartificial_matrix_generation_float.so: artificial_matrix_generation.c ordered_set.o
 	$(CC) $(CFLAGS) -D'ValueType=float' $(SOFLAGS) $^ -o $@ $(LDFLAGS)
 
 
