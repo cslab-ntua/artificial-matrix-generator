@@ -21,7 +21,8 @@ struct ordered_set {
 
 
 struct ordered_set * ordered_set_new(long max_size);
-void ordered_set_destroy(struct ordered_set * t);
+void ordered_set_clean(struct ordered_set * t);
+void ordered_set_destroy(struct ordered_set ** t_ptr);
 void ordered_set_sort(struct ordered_set * t, int * A);
 int ordered_set_insert(struct ordered_set * t, int val);
 

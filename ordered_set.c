@@ -20,10 +20,18 @@ ordered_set_new(long max_size)
 
 
 void
-ordered_set_destroy(struct ordered_set * t)
+ordered_set_clean(struct ordered_set * t)
 {
 	free(t->nodes);
-	free(t);
+}
+
+
+void
+ordered_set_destroy(struct ordered_set ** t_ptr)
+{
+	ordered_set_clean(*t_ptr);
+	free(*t_ptr);
+	*t_ptr = NULL;
 }
 
 

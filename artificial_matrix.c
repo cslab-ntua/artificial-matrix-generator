@@ -20,7 +20,7 @@ plot_csr(struct csr_matrix * csr, char * matrix_name)
 	long buf_n = strlen(matrix_name) + 1 + 1000;
 	char buf[buf_n], buf_title[buf_n];
 
-	double get_row(void * A, int pos)
+	double get_row(void * A, long pos)
 	{
 		struct csr_matrix * csr = A;
 		long i = binary_search(csr->row_ptr, 0, csr->nr_rows, pos, NULL, NULL);
@@ -28,12 +28,12 @@ plot_csr(struct csr_matrix * csr, char * matrix_name)
 			i--;
 		return (double) i;
 	}
-	double get_col(void * A, int pos)
+	double get_col(void * A, long pos)
 	{
 		struct csr_matrix * csr = A;
 		return (double) csr->col_ind[pos];
 	}
-	double get_degree(void * A, int i)
+	double get_degree(void * A, long i)
 	{
 		struct csr_matrix * csr = A;
 		return (double) csr->row_ptr[i+1] -  csr->row_ptr[i];

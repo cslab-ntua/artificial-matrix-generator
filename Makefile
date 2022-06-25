@@ -23,7 +23,7 @@ export CPATH=
 
 LIBSRC =
 
-library = ./lib
+library = ../lib
 
 LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
 

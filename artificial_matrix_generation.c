@@ -163,7 +163,6 @@ calculate_new_bw(double B, double n)
 struct csr_matrix *
 artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row, double std_nnz_per_row, char * distribution, unsigned int seed, char * placement, double bw_scaled, double skew, double avg_num_neighbours, double cross_row_similarity)
 {
-	__label__ label_placement_out;
 	int num_threads = omp_get_max_threads();
 	int * offsets;
 	int * col_ind;
@@ -244,6 +243,7 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 
 	_Pragma("omp parallel")
 	{
+		__label__ label_placement_out;
 		int tnum = omp_get_thread_num();
 		struct Random_State * rs;
 		long i, j, k, i_s, i_e, j_s, j_e, per_t_len;
@@ -505,8 +505,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			j_s = j_e;
 		}
 
-		ordered_set_destroy(OS);
-		random_destroy(rs);
+		ordered_set_destroy(&OS);
+		random_destroy(&rs);
 	}
 
 	csr->avg_nnz_per_row = ((double) nnz) / nr_rows;
