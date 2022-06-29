@@ -1,5 +1,8 @@
 .PHONY: clean
 
+# Test for needed library files.
+CPATH=
+
 
 CC = gcc
 
@@ -18,11 +21,9 @@ SOFLAGS = -fPIC -shared
 
 LDFLAGS = -lm
 
-# Test for needed library files.
-export CPATH=
-
 LIBSRC =
 
+# library = $(C_LIB_PATH)
 library = ../lib
 
 LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
