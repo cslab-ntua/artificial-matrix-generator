@@ -1,6 +1,9 @@
 #ifndef MATRIX_UTIL_H
 #define MATRIX_UTIL_H
 
+#include <omp.h>
+#include <math.h>
+
 #include "artificial_matrix_generation.h"
 
 
