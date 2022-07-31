@@ -26,7 +26,7 @@ LIBSRC =
 # library = $(C_LIB_PATH)
 library = ../lib
 
-LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c
+LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c $(library)/array_metrics.c
 
 CFLAGS += -I$(library) -D'PLOT'
 
@@ -50,6 +50,8 @@ artificial_matrix_generation_float.o: artificial_matrix_generation.c
 	$(CC) $(CFLAGS) -D'ValueType=float' $^ -c -o $@ $(LDFLAGS)
 
 ordered_set.o: ordered_set.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDFLAGS)
+array_metrics.o: array_metrics.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDFLAGS)
 
 
