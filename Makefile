@@ -24,11 +24,10 @@ LDFLAGS = -lm
 LIBSRC =
 
 # library = $(C_LIB_PATH)
-library = ../lib
 
-LIBSRC = $(library)/plot/plot.c $(library)/parallel_io.c $(library)/string_util.c $(library)/array_metrics.c
+LIBSRC =
 
-CFLAGS += -I$(library) -D'PLOT'
+CFLAGS += -D'PLOT'
 
 
 all: artificial_matrix.exe artificial_matrix_generation_double.o artificial_matrix_generation_float.o ordered_set.o libartificial_matrix_generation_double.so libartificial_matrix_generation_float.so
@@ -50,8 +49,6 @@ artificial_matrix_generation_float.o: artificial_matrix_generation.c
 	$(CC) $(CFLAGS) -D'ValueType=float' $^ -c -o $@ $(LDFLAGS)
 
 ordered_set.o: ordered_set.c
-	$(CC) $(CFLAGS) $^ -c -o $@ $(LDFLAGS)
-array_metrics.o: array_metrics.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDFLAGS)
 
 
