@@ -187,6 +187,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	double * degrees;
 	double * bandwidths;
 	double * scatters;
+	double * ngroups;
+	double * clusters;
 
 	debug("arguments: %ld %ld %g %g %s %u %s %g %g %g %g\n", nr_rows, nr_cols, avg_nnz_per_row, std_nnz_per_row, distribution, seed, placement, bw_scaled, skew, avg_num_neighbours, cross_row_similarity);
 
@@ -203,7 +205,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	degrees = (typeof(degrees)) safe_aligned_alloc(64, nr_rows * sizeof(*degrees));
 	bandwidths = (typeof(bandwidths)) safe_aligned_alloc(64, nr_rows * sizeof(*bandwidths));
 	scatters = (typeof(scatters)) safe_aligned_alloc(64, nr_rows * sizeof(*scatters));
-
+	ngroups = (typeof(ngroups)) safe_aligned_alloc(64, nr_rows * sizeof(*ngroups));
+	clusters = (typeof(clusters)) safe_aligned_alloc(64, nr_rows * sizeof(*clusters));
 
 	// Calculate parameters from the addition of the exponential.
 	MAX = avg_nnz_per_row * (1 + skew);
@@ -370,6 +373,8 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			offsets[i] = j_s;
 			bandwidths[i] = 0;
 			scatters[i] = 0;
+			clusters[i] = 0;
+			ngroups[i] = 0;
 			if (degree == 0)
 				continue;
 			OS->size = 0;
@@ -502,6 +507,18 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 			s = degree / b;
 			scatters[i] = s;
 
+			long prev_ci;
+			if(degree>0){
+				ngroups[i] = 1;
+				prev_ci = col_ind[j_s];
+				for(long jj=j_s+1; jj<j_e; jj++) {
+					if(col_ind[jj] > prev_ci+1) // a new ngroup has to be considered
+						ngroups[i]++;
+					prev_ci = col_ind[jj];
+				}
+				clusters[i] = ngroups[i] / degree;
+			}
+
 			j_s = j_e;
 		}
 
@@ -512,24 +529,51 @@ artificial_matrix_generation(long nr_rows, long nr_cols, double avg_nnz_per_row,
 	csr->avg_nnz_per_row = ((double) nnz) / nr_rows;
 	csr->std_nnz_per_row = matrix_std_base(degrees, nr_rows, csr->avg_nnz_per_row);
 	matrix_min_max(degrees, nr_rows, &csr->min_nnz_per_row, &csr->max_nnz_per_row);
+	
 	csr->skew = (csr->max_nnz_per_row - csr->avg_nnz_per_row) / csr->avg_nnz_per_row;
 
 	csr->avg_bw = matrix_mean(bandwidths, nr_rows);
 	csr->std_bw = matrix_std_base(bandwidths, nr_rows, csr->avg_bw);
+	matrix_min_max(bandwidths, nr_rows, &csr->min_bw, &csr->max_bw);
+
 	csr->avg_bw_scaled = csr->avg_bw / nr_cols;
 	csr->std_bw_scaled = csr->std_bw / nr_cols;
+	csr->min_bw_scaled = csr->min_bw / nr_cols;
+	csr->max_bw_scaled = csr->max_bw / nr_cols;
 
 	csr->avg_sc = matrix_mean(scatters, nr_rows);
 	csr->std_sc = matrix_std_base(scatters, nr_rows, csr->avg_sc);
+	matrix_min_max(scatters, nr_rows, &csr->min_sc, &csr->max_sc);
 	csr->avg_sc_scaled = csr->avg_sc * nr_cols;
 	csr->std_sc_scaled = csr->std_sc * nr_cols;
+	csr->min_sc_scaled = csr->min_sc * nr_cols;
+	csr->max_sc_scaled = csr->max_sc * nr_cols;
 
-	csr->avg_num_neighbours = csr_avg_row_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1);
-	csr->cross_row_similarity = csr_cross_row_similarity(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1);
+	// csr->avg_num_neighbours = csr_avg_row_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1);
+	csr_num_neighbours(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1, 
+		&csr->avg_num_neighbours, &csr->std_num_neighbours, &csr->min_num_neighbours, &csr->max_num_neighbours);
+
+	// csr->cross_row_similarity = csr_cross_row_similarity(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1);
+	csr_cross_row_similarity2(csr->row_ptr, csr->col_ind, csr->nr_rows, csr->nr_cols, csr->nr_nzeros, 1,
+		&csr->cross_row_similarity, &csr->std_cross_row_similarity, &csr->min_cross_row_similarity, &csr->max_cross_row_similarity);
+
+	csr->avg_clustering = matrix_mean(clusters, nr_rows);
+	csr->std_clustering = matrix_std_base(clusters, nr_rows, csr->avg_clustering);
+	matrix_min_max(clusters, nr_rows, &csr->min_clustering, &csr->max_clustering);
+
+	csr->avg_ngroups = matrix_mean(ngroups, nr_rows);
+	csr->std_ngroups = matrix_std_base(ngroups, nr_rows, csr->avg_ngroups);
+	matrix_min_max(ngroups, nr_rows, &csr->min_ngroups, &csr->max_ngroups);
+
+	csr_ngroups_dis(csr->row_ptr, csr->col_ind, csr->nr_rows, ngroups,
+		&csr->avg_ngroups_size, &csr->std_ngroups_size, &csr->min_ngroups_size, &csr->max_ngroups_size, 
+		&csr->avg_dis, &csr->std_dis, &csr->min_dis, &csr->max_dis);
 
 	free(degrees);
 	free(bandwidths);
 	free(scatters);
+	free(ngroups);
+	free(clusters);
 
 	return csr;
 }

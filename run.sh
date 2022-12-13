@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-cores=8
+cores=24
 # cores=16
 
 # Encourages idle threads to spin rather than sleep.
@@ -104,7 +104,11 @@ params=(
 
     # '303884 303884 500 166.6667 normal random 0.05 1000 0.05 0.05 14'
 
-    '303884 303884 500 166.6667 normal simple 0.05 1000 0.05 0.05 14'
+    # '65535 65535 5 1.6667 normal 14 random 0.05 0 0.05 0.05'
+
+    '65535 65535 5 1.6667 normal random 0.05 0 0.05 0.05 14'
+    '1082401 1082401 10 3.3333 normal random 0.3 10000 0.5 0.5 14'
+    '3020732 3020732 50 16.6667 normal random 0.3 100 1.9 0.05 14'
 
     # '256 1 1 0 normal random 0.5 0 0 0 14 test'
 

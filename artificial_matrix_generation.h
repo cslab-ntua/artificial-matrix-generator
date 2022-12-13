@@ -21,29 +21,68 @@ struct csr_matrix {
 	int precision;
 	char mem_range[128];
 
-	double avg_nnz_per_row;
-	double std_nnz_per_row;
-	double min_nnz_per_row;
-	double max_nnz_per_row;
-
 	double skew;
 
 	int seed;
 	char * distribution;
 	char * placement;
 
-	double avg_bw;
-	double std_bw;
-	double avg_bw_scaled;
-	double std_bw_scaled;
+	double avg_nnz_per_row;
+	double std_nnz_per_row;
+	double min_nnz_per_row;
+	double max_nnz_per_row;
 
 	double avg_sc;
 	double std_sc;
+	double min_sc;
+	double max_sc;
+	
 	double avg_sc_scaled;
 	double std_sc_scaled;
+	double min_sc_scaled;
+	double max_sc_scaled;
+
+	double avg_bw;
+	double std_bw;
+	double min_bw;
+	double max_bw;
+
+	double avg_bw_scaled;
+	double std_bw_scaled;
+	double min_bw_scaled;
+	double max_bw_scaled;
 
 	double avg_num_neighbours;
+	double std_num_neighbours;
+	double min_num_neighbours;
+	double max_num_neighbours;
+
 	double cross_row_similarity;
+	// double avg_cross_row_similarity;
+	double std_cross_row_similarity;
+	double min_cross_row_similarity;
+	double max_cross_row_similarity;
+
+	double avg_clustering;
+	double std_clustering;
+	double min_clustering;
+	double max_clustering;
+
+	double avg_dis;
+	double std_dis;
+	double min_dis;
+	double max_dis;
+
+	double avg_ngroups;
+	double std_ngroups;
+	double min_ngroups;
+	double max_ngroups;
+
+	double avg_ngroups_size;
+	double std_ngroups_size;
+	double min_ngroups_size;
+	double max_ngroups_size;
+
 };
 
 

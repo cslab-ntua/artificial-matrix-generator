@@ -3,6 +3,7 @@
 
 #include <omp.h>
 #include <math.h>
+#include <stdlib.h>
 
 // #include "artificial_matrix_generation.h"
 
@@ -230,6 +231,40 @@ csr_avg_row_neighbours(int * R_offsets, int * C, long m, __attribute__((unused))
 
 __attribute__((unused))
 static
+void
+csr_num_neighbours(int * R_offsets, int * C, long m, __attribute__((unused)) long n, long nnz, long window_size,
+	double * avg_num_neighbours, double * std_num_neighbours, double * min_num_neighbours, double * max_num_neighbours)
+{
+	double * num_neighbours = (typeof(num_neighbours)) malloc(nnz * sizeof(*num_neighbours));
+	#pragma omp parallel
+	{
+		long i, j, k;
+		#pragma omp for schedule(static)
+		for (i=0;i<m;i++)
+		{
+			for (j=R_offsets[i];j<R_offsets[i+1];j++)
+			{
+				long num_neigh_curr = 0;
+				for (k=j+1;k<R_offsets[i+1];k++)
+				{
+					if (C[k] - C[j] > window_size)
+						break;
+					num_neigh_curr += 2;
+				}
+				num_neighbours[j] = (double)num_neigh_curr;
+			}
+		}
+	}
+
+	matrix_min_max(num_neighbours, nnz, min_num_neighbours, max_num_neighbours);
+	*avg_num_neighbours = matrix_mean(num_neighbours, nnz);
+	*std_num_neighbours = matrix_std_base(num_neighbours, nnz, *avg_num_neighbours);
+	free(num_neighbours);
+}
+
+
+__attribute__((unused))
+static
 double
 csr_cross_row_similarity(int * R_offsets, int * C, long m, __attribute__((unused)) long n, __attribute__((unused)) long nnz, long window_size)
 {
@@ -290,6 +325,145 @@ csr_cross_row_similarity(int * R_offsets, int * C, long m, __attribute__((unused
 	return total_row_similarity / total_num_non_empty_rows;
 }
 
+
+__attribute__((unused))
+static
+void
+csr_cross_row_similarity2(int * R_offsets, int * C, long m, __attribute__((unused)) long n, __attribute__((unused)) long nnz, long window_size,
+	double * avg_cross_row_similarity, double * std_cross_row_similarity, double * min_cross_row_similarity, double * max_cross_row_similarity)
+{
+	double * cross_row_similarity_tmp = (typeof(cross_row_similarity_tmp)) malloc(m * sizeof(*cross_row_similarity_tmp));
+	long total_num_non_empty_rows = 0;
+	#pragma omp parallel
+	{
+		long i, j, k, k_s, k_e, l;
+		long degree, num_similarities, column_diff;
+		long num_non_empty_rows = 0;
+		#pragma omp for schedule(static)
+		for (i=0;i<m;i++)
+		{
+			cross_row_similarity_tmp[i] = 0;
+
+			degree = R_offsets[i+1] - R_offsets[i];
+			if (degree <= 0)
+				continue;
+			for (l=i+1;l<m;l++)       // Find next non-empty row.
+				if (R_offsets[l+1] - R_offsets[l] > 0)
+					break;
+			num_non_empty_rows++;
+			if (l < m)
+			{
+				k_s = R_offsets[l];
+				k_e = R_offsets[l+1];
+				num_similarities = 0;
+				k = k_s;
+				for (j=R_offsets[i];j<R_offsets[i+1];j++)
+				{
+					while (k < k_e)
+					{
+						column_diff = C[k] - C[j];
+						if (labs(column_diff) <= window_size)
+						{
+							num_similarities++;
+							break;
+						}
+						if (column_diff <= 0)
+							k++;
+						else
+							break;   // went outside of area to examine
+					}
+				}
+				cross_row_similarity_tmp[i] = ((double) num_similarities) / degree;
+			}
+
+		}
+		__atomic_fetch_add(&total_num_non_empty_rows, num_non_empty_rows, __ATOMIC_RELAXED);
+	}
+	if (total_num_non_empty_rows == 0){
+		*avg_cross_row_similarity = 0;
+		*std_cross_row_similarity = 0;
+		*min_cross_row_similarity = 0;
+		*max_cross_row_similarity = 0;
+	}
+	else{
+		// need to keep only those that are !=0 and use right number of "total_num_non_empty_rows", otherwise error compared to initial calculation
+		double * cross_row_similarity = (typeof(cross_row_similarity)) malloc(total_num_non_empty_rows * sizeof(*cross_row_similarity));
+		long cnt=0;
+		for(long i=0; i<m; i++){
+			if(cross_row_similarity_tmp[i]>0){
+				cross_row_similarity[cnt] = cross_row_similarity_tmp[i];
+				cnt++;
+			}
+		}
+		matrix_min_max(cross_row_similarity, total_num_non_empty_rows, min_cross_row_similarity, max_cross_row_similarity);
+		*avg_cross_row_similarity = matrix_mean(cross_row_similarity, total_num_non_empty_rows);
+		*std_cross_row_similarity = matrix_std_base(cross_row_similarity, total_num_non_empty_rows, *avg_cross_row_similarity);
+		free(cross_row_similarity);
+	}
+	free(cross_row_similarity_tmp);
+}
+
+
+__attribute__((unused))
+static
+void
+csr_ngroups_dis(int * R_offsets, int * C, long m, double * ngroups,
+	double * avg_ngroups_size, double * std_ngroups_size, double * min_ngroups_size, double * max_ngroups_size, 
+	double * avg_dis, double * std_dis, double * min_dis, double * max_dis)
+{	
+	long ngroups_total = 0;
+	#pragma omp parallel
+	{
+		long i;
+		#pragma omp for schedule(static) reduction(+:ngroups_total)
+		for (i=0;i<m;i++)
+			ngroups_total+=ngroups[i];
+	}
+
+	double * ngroups_size = (typeof(ngroups)) calloc((long)ngroups_total, sizeof(*ngroups));
+	double * dis = (typeof(dis)) malloc((long)(ngroups_total-1) * sizeof(*dis ));
+
+	long i, j, cnt=0, last_ci;
+	for(i=0; i<m; i++){
+		// if(i<17)
+		// 	printf("--- row = %ld\n", i);
+		long degree = R_offsets[i+1] - R_offsets[i];
+		if(degree>0){
+			// change of line and we have to consider distance between last element of row i-1 and first element of row i
+
+			// first element, keep its distance from last element of previous row
+			if(i>0){
+				last_ci = C[R_offsets[i]-1];
+				dis[cnt] = fabs((double) (C[R_offsets[i]] - last_ci));
+				ngroups_size[cnt]++;
+				cnt++;
+			}
+			// then, proceed with remaining elements of this row
+			long prev_ci = C[R_offsets[i]]; 
+			for(j=R_offsets[i]+1; j<R_offsets[i+1]; j++){
+				ngroups_size[cnt]++;
+				if(C[j] > prev_ci+1) { // a new ngroup from now on
+					dis[cnt] = fabs((double) (C[j] - prev_ci));
+					cnt++;
+				}
+				prev_ci = C[j];
+			}
+		}
+	}
+
+	// for(i=0;i<22;i++) printf("ngroups_size[%ld] = %ld\tdis[%ld] = %ld\n", i, (long)ngroups_size[i], i, (long)dis[i]);
+
+	matrix_min_max(ngroups_size, ngroups_total, min_ngroups_size, max_ngroups_size);
+	*avg_ngroups_size = matrix_mean(ngroups_size, ngroups_total);
+	*std_ngroups_size = matrix_std_base(ngroups_size, ngroups_total, *avg_ngroups_size);
+
+	matrix_min_max(dis, ngroups_total-1, min_dis, max_dis);
+	*avg_dis = matrix_mean(dis, ngroups_total-1);
+	*std_dis = matrix_std_base(dis, ngroups_total-1, *avg_dis);
+
+	free(ngroups_size);
+	free(dis);
+}
 
 #endif /* MATRIX_UTIL_H */
 
