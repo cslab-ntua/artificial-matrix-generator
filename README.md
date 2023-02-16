@@ -1,5 +1,5 @@
 # artificial-matrix-generator
-This project generates artificial matrices, given specific structural features (parameters), than can be used for several sparse-matrix benchmarks. The features that have to be provided to the generator are the following : 
+This project generates artificial matrices, given specific structural features (parameters), that can be used for sparse-matrix benchmarks. The features that have to be provided to the generator are the following : 
 
 * number of rows
 * number of columns
